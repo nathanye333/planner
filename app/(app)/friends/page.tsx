@@ -4,14 +4,13 @@ import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserChip, type MiniProfile } from "@/components/user-chip";
-import { ActionButton } from "@/components/action-button";
 import { FindFriends } from "@/components/friends/find-friends";
 import {
-  acceptFriendRequest,
-  cancelFriendRequest,
-  declineFriendRequest,
-  removeFriend,
-} from "@/lib/actions/friends";
+  AcceptRequestButton,
+  CancelRequestButton,
+  DeclineRequestButton,
+  RemoveFriendButton,
+} from "@/components/friends/friend-actions";
 
 type RequestRow = {
   id: string;
@@ -89,14 +88,7 @@ export default async function FriendsPage() {
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <UserChip profile={f} />
-                  <ActionButton
-                    size="sm"
-                    variant="ghost"
-                    action={() => removeFriend(f.id)}
-                    successMessage="Friend removed"
-                  >
-                    Remove
-                  </ActionButton>
+                  <RemoveFriendButton friendId={f.id} />
                 </li>
               ))}
             </ul>
@@ -118,20 +110,8 @@ export default async function FriendsPage() {
                     >
                       {r.sender && <UserChip profile={r.sender} />}
                       <div className="flex gap-2">
-                        <ActionButton
-                          size="sm"
-                          action={() => acceptFriendRequest(r.id)}
-                          successMessage="You're now friends"
-                        >
-                          Accept
-                        </ActionButton>
-                        <ActionButton
-                          size="sm"
-                          variant="outline"
-                          action={() => declineFriendRequest(r.id)}
-                        >
-                          Decline
-                        </ActionButton>
+                        <AcceptRequestButton requestId={r.id} />
+                        <DeclineRequestButton requestId={r.id} />
                       </div>
                     </li>
                   ))}
@@ -151,13 +131,7 @@ export default async function FriendsPage() {
                       className="flex items-center justify-between rounded-lg border p-3"
                     >
                       {r.recipient && <UserChip profile={r.recipient} />}
-                      <ActionButton
-                        size="sm"
-                        variant="ghost"
-                        action={() => cancelFriendRequest(r.id)}
-                      >
-                        Cancel
-                      </ActionButton>
+                      <CancelRequestButton requestId={r.id} />
                     </li>
                   ))}
                 </ul>
