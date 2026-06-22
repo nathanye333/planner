@@ -27,17 +27,15 @@ export async function GET(request: Request) {
   // often omit it, and writing null would break future syncs.
   const { provider_token, provider_refresh_token } = data.session;
   if (provider_token || provider_refresh_token) {
-    const upsertData: Record<string, unknown> = {
-      user_id: data.session.user.id,
-      provider: "google",
-      access_token: provider_token ?? null,
-    };
-    if (provider_refresh_token) {
-      upsertData.refresh_token = provider_refresh_token;
-    }
-    await supabase.from("calendar_connections").upsert(upsertData, {
-      onConflict: "user_id,provider",
-    });
+    await supabase.from("calendar_connections").upsert(
+      {
+        user_id: data.session.user.id,
+        provider: "google",
+        access_token: provider_token ?? null,
+        ...(provider_refresh_token ? { refresh_token: provider_refresh_token } : {}),
+      },
+      { onConflict: "user_id,provider" },
+    );
   }
 
   // Send brand-new users to onboarding.
