@@ -19,7 +19,11 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
       grant_type: "refresh_token",
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    console.error("[refreshAccessToken] failed:", res.status, body);
+    return null;
+  }
   const json = (await res.json()) as { access_token: string; expires_in: number };
   return {
     accessToken: json.access_token,
