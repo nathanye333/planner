@@ -23,17 +23,21 @@ export async function GET(request: Request) {
   }
 
   // If Google returned calendar tokens, store them for periodic sync.
+  // Only overwrite refresh_token when Google actually returned one — re-auths
+  // often omit it, and writing null would break future syncs.
   const { provider_token, provider_refresh_token } = data.session;
   if (provider_token || provider_refresh_token) {
-    await supabase.from("calendar_connections").upsert(
-      {
-        user_id: data.session.user.id,
-        provider: "google",
-        access_token: provider_token ?? null,
-        refresh_token: provider_refresh_token ?? null,
-      },
-      { onConflict: "user_id,provider" },
-    );
+    const upsertData: Record<string, unknown> = {
+      user_id: data.session.user.id,
+      provider: "google",
+      access_token: provider_token ?? null,
+    };
+    if (provider_refresh_token) {
+      upsertData.refresh_token = provider_refresh_token;
+    }
+    await supabase.from("calendar_connections").upsert(upsertData, {
+      onConflict: "user_id,provider",
+    });
   }
 
   // Send brand-new users to onboarding.
