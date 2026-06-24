@@ -100,6 +100,11 @@ export default async function PlannerDetailPage({
             participantCount={input.participantCount}
             profilesById={profilesById}
             plannerTitle={planner.title}
+            slotMinutes={planner.slot_minutes}
+            dayStartHour={planner.day_start_hour}
+            dayEndHour={planner.day_end_hour}
+            dateStart={planner.date_start}
+            dateEnd={planner.date_end}
           />
         </CardContent>
       </Card>

@@ -27,8 +27,7 @@ const RANK: Record<AvailabilityStatus, number> = {
  * per slot from their availability blocks. Absence of a block means FREE.
  * When multiple blocks overlap a slot, the busiest status wins.
  *
- * Slots are computed in UTC for determinism; the UI renders times in the
- * viewer's locale.
+ * Slots are computed in local time to match the rest of the app calendar UX.
  */
 export function buildAvailabilityInput(
   planner: PlannerWindow,
@@ -47,23 +46,22 @@ export function buildAvailabilityInput(
 
   const [sy, sm, sd] = planner.date_start.split("-").map(Number);
   const [ey, em, ed] = planner.date_end.split("-").map(Number);
-  let dayCursor = Date.UTC(sy, sm - 1, sd);
-  const lastDay = Date.UTC(ey, em - 1, ed);
+  let day = new Date(sy, sm - 1, sd);
+  const lastDay = new Date(ey, em - 1, ed);
 
-  while (dayCursor <= lastDay) {
-    const day = new Date(dayCursor);
+  while (day.getTime() <= lastDay.getTime()) {
     for (
       let minute = planner.day_start_hour * 60;
       minute < planner.day_end_hour * 60;
       minute += planner.slot_minutes
     ) {
-      const start = Date.UTC(
-        day.getUTCFullYear(),
-        day.getUTCMonth(),
-        day.getUTCDate(),
+      const start = new Date(
+        day.getFullYear(),
+        day.getMonth(),
+        day.getDate(),
         0,
         minute,
-      );
+      ).getTime();
       const end = start + slotMs;
 
       const participants = participantIds.map((userId) => {
@@ -85,7 +83,7 @@ export function buildAvailabilityInput(
         participants,
       });
     }
-    dayCursor += 86_400_000;
+    day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
   }
 
   return { slots, participantCount: participantIds.length };

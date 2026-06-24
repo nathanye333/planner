@@ -131,3 +131,19 @@ body {
 .fc .fc-event {
   cursor: pointer;
 }
+.planner-calendar .fc-bg-event.planner-heatmap,
+.planner-calendar .fc-event.planner-heatmap {
+  opacity: 0.9 !important;
+  box-sizing: border-box;
+  /* Draw explicit cell boundaries on top of the green fill */
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+  mix-blend-mode: multiply;
+}
+.planner-calendar .fc-timegrid-col-bg .fc-bg-event {
+  opacity: 0.9 !important;
+}
+.planner-calendar .planner-slot-active {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+  z-index: 5 !important;
+}
