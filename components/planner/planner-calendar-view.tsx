@@ -9,6 +9,7 @@ import type {
   EventHoveringArg,
   EventInput,
 } from "@fullcalendar/core";
+import { dayAfterDate } from "@/lib/timezone";
 
 function hourToTime(hour: number) {
   return `${String(hour).padStart(2, "0")}:00:00`;
@@ -20,22 +21,11 @@ function minutesToDuration(minutes: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
 }
 
-function dayAfter(date: string) {
-  const [y, m, d] = date.split("-").map(Number);
-  const next = new Date(y, m - 1, d + 1);
-  return [
-    next.getFullYear(),
-    String(next.getMonth() + 1).padStart(2, "0"),
-    String(next.getDate()).padStart(2, "0"),
-  ].join("-");
-}
-
 /**
  * Week-only FullCalendar for planner heatmaps. Mirrors CalendarView styling
  * (via shared .fc theme in globals.css) but locked to the planner window.
  *
- * Planner rendering intentionally follows local-time behavior used by the
- * rest of the calendar surfaces in the app.
+ * All wall-clock times are rendered in the viewer's profile timezone.
  */
 export function PlannerCalendarView({
   events,
@@ -44,6 +34,7 @@ export function PlannerCalendarView({
   slotMinutes,
   dateStart,
   dateEnd,
+  timezone,
   onEventClick,
   onEventMouseEnter,
   onEventMouseLeave,
@@ -55,6 +46,7 @@ export function PlannerCalendarView({
   slotMinutes: number;
   dateStart: string;
   dateEnd: string;
+  timezone: string;
   onEventClick?: (arg: EventClickArg) => void;
   onEventMouseEnter?: (arg: EventHoveringArg) => void;
   onEventMouseLeave?: (arg: EventHoveringArg) => void;
@@ -63,11 +55,14 @@ export function PlannerCalendarView({
     | string[]
     | ((arg: EventContentArg) => string | string[]);
 }) {
+  const rangeEnd = dayAfterDate(dateEnd, timezone);
+
   return (
     <div className="planner-calendar">
       <FullCalendar
         plugins={[timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
+        timeZone={timezone}
         headerToolbar={{
           left: "prev,next today",
           center: "title",
@@ -93,8 +88,8 @@ export function PlannerCalendarView({
         slotMaxTime={hourToTime(dayEndHour)}
         slotDuration={minutesToDuration(slotMinutes)}
         initialDate={dateStart}
-        validRange={{ start: dateStart, end: dayAfter(dateEnd) }}
-        visibleRange={{ start: dateStart, end: dayAfter(dateEnd) }}
+        validRange={{ start: dateStart, end: rangeEnd }}
+        visibleRange={{ start: dateStart, end: rangeEnd }}
         allDaySlot={false}
         stickyHeaderDates
         expandRows

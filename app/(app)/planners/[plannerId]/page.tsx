@@ -7,9 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvailabilityGrid } from "@/components/planner/availability-grid";
 import { DeletePlannerButton } from "@/components/planner/delete-planner-button";
 import type { MiniProfile } from "@/components/user-chip";
-import { formatDate, initials } from "@/lib/format";
+import { initials } from "@/lib/format";
 import { schedulingEngine } from "@/lib/scheduling/engine";
 import { buildAvailabilityInput, type UserBlock } from "@/lib/scheduling/slots";
+import { formatCalendarDate, plannerWindowBounds } from "@/lib/timezone";
 
 export default async function PlannerDetailPage({
   params,
@@ -40,10 +41,11 @@ export default async function PlannerDetailPage({
     participants.map((p) => [p.id, p]),
   ) as Record<string, MiniProfile>;
 
-  const windowStart = `${planner.date_start}T00:00:00.000Z`;
-  const windowEndDate = new Date(`${planner.date_end}T00:00:00.000Z`);
-  windowEndDate.setUTCDate(windowEndDate.getUTCDate() + 1);
-  const windowEnd = windowEndDate.toISOString();
+  const { windowStart, windowEnd } = plannerWindowBounds(
+    planner.date_start,
+    planner.date_end,
+    profile.timezone,
+  );
 
   const { data: blocks } =
     participantIds.length > 0
@@ -59,6 +61,7 @@ export default async function PlannerDetailPage({
     planner,
     participantIds,
     (blocks ?? []) as UserBlock[],
+    profile.timezone,
   );
   const ranked = schedulingEngine.calculateAvailability(input);
 
@@ -68,7 +71,7 @@ export default async function PlannerDetailPage({
     <div>
       <PageHeader
         title={planner.title}
-        description={`${formatDate(planner.date_start)} – ${formatDate(planner.date_end)}`}
+        description={`${formatCalendarDate(planner.date_start, profile.timezone)} – ${formatCalendarDate(planner.date_end, profile.timezone)}`}
         action={isCreator ? <DeletePlannerButton plannerId={planner.id} /> : undefined}
       />
 
@@ -105,6 +108,7 @@ export default async function PlannerDetailPage({
             dayEndHour={planner.day_end_hour}
             dateStart={planner.date_start}
             dateEnd={planner.date_end}
+            timezone={profile.timezone}
           />
         </CardContent>
       </Card>

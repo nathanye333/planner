@@ -9,24 +9,10 @@ import { PlannerCalendarView } from "@/components/planner/planner-calendar-view"
 import { AVAILABILITY_META, type AvailabilityStatus } from "@/lib/constants";
 import type { RankedSlot } from "@/lib/scheduling/types";
 import type { MiniProfile } from "@/components/user-chip";
+import { formatDayInTimezone, formatTimeInTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 const STATUS_ORDER: AvailabilityStatus[] = ["free", "tentative", "committed"];
-
-function dayLabel(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "numeric",
-    day: "numeric",
-  });
-}
-
-function timeLabel(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 function freeFraction(slot: RankedSlot, participantCount: number) {
   return participantCount > 0 ? slot.counts.free / participantCount : 0;
@@ -48,6 +34,7 @@ export function AvailabilityGrid({
   dayEndHour,
   dateStart,
   dateEnd,
+  timezone,
 }: {
   slots: RankedSlot[];
   participantCount: number;
@@ -58,6 +45,7 @@ export function AvailabilityGrid({
   dayEndHour: number;
   dateStart: string;
   dateEnd: string;
+  timezone: string;
 }) {
   const [hovered, setHovered] = useState<RankedSlot | null>(null);
   const [pinned, setPinned] = useState<RankedSlot | null>(null);
@@ -123,7 +111,8 @@ export function AvailabilityGrid({
                 )}
               >
                 <span className="text-sm font-medium">
-                  {dayLabel(s.start)} · {timeLabel(s.start)}
+                  {formatDayInTimezone(s.start, timezone)} ·{" "}
+                  {formatTimeInTimezone(s.start, timezone)}
                 </span>
                 <span className="text-muted-foreground text-xs">
                   {s.counts.free} free · {s.counts.tentative} maybe ·{" "}
@@ -161,6 +150,7 @@ export function AvailabilityGrid({
             slotMinutes={slotMinutes}
             dateStart={dateStart}
             dateEnd={dateEnd}
+            timezone={timezone}
             onEventMouseEnter={(arg) => {
               const slot = slotFromEvent(arg);
               if (slot) setHovered(slot);
@@ -182,9 +172,12 @@ export function AvailabilityGrid({
           {active ? (
             <div className="flex flex-col gap-4">
               <div>
-                <p className="text-sm font-semibold">{dayLabel(active.start)}</p>
+                <p className="text-sm font-semibold">
+                  {formatDayInTimezone(active.start, timezone)}
+                </p>
                 <p className="text-muted-foreground text-sm">
-                  {timeLabel(active.start)} – {timeLabel(active.end)}
+                  {formatTimeInTimezone(active.start, timezone)} –{" "}
+                  {formatTimeInTimezone(active.end, timezone)}
                 </p>
               </div>
 
