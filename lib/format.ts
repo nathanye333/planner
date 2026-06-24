@@ -5,40 +5,42 @@ export function initials(name?: string | null): string {
   return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
-const dateTimeFmt = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-});
-
-const dateFmt = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
-
-const timeFmt = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-});
-
-export function formatDateTime(iso: string): string {
-  return dateTimeFmt.format(new Date(iso));
+/**
+ * All formatters require an IANA `timezone` (the viewer's profile timezone) so
+ * wall-clock output is identical on the server (UTC region, e.g. Vercel) and in
+ * the browser, and always reflects the user's calendar rather than UTC.
+ */
+export function formatDateTime(iso: string, timezone: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: timezone,
+  });
 }
 
-export function formatDate(iso: string): string {
-  return dateFmt.format(new Date(iso));
+export function formatDate(iso: string, timezone: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: timezone,
+  });
 }
 
-export function formatTime(iso: string): string {
-  return timeFmt.format(new Date(iso));
+export function formatTime(iso: string, timezone: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: timezone,
+  });
 }
 
 /** Compact relative time, e.g. "3m", "2h", "5d". */
-export function timeAgo(iso: string): string {
+export function timeAgo(iso: string, timezone: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const s = Math.floor(diff / 1000);
   if (s < 60) return "just now";
@@ -50,5 +52,5 @@ export function timeAgo(iso: string): string {
   if (d < 7) return `${d}d`;
   const w = Math.floor(d / 7);
   if (w < 5) return `${w}w`;
-  return formatDate(iso);
+  return formatDate(iso, timezone);
 }

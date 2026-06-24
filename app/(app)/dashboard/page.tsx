@@ -91,7 +91,11 @@ export default async function DashboardPage() {
         <CardContent className="flex flex-col gap-2">
           {upcoming && upcoming.length > 0 ? (
             upcoming.map((event) => (
-              <EventListItem key={event.id} event={event} />
+              <EventListItem
+                key={event.id}
+                event={event}
+                timezone={profile.timezone}
+              />
             ))
           ) : (
             <p className="text-muted-foreground py-6 text-center text-sm">

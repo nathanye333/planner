@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select";
 import { UserChip, type MiniProfile } from "@/components/user-chip";
 import { createPlanner } from "@/lib/actions/planners";
+import { offsetDateInTimezone } from "@/lib/timezone";
+import { useTimezone } from "@/components/timezone-provider";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -26,15 +28,10 @@ function hourLabel(h: number) {
   return `${display}:00 ${period}`;
 }
 
-function isoDate(offsetDays: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
-}
-
 export function PlannerForm({ friends }: { friends: MiniProfile[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const timezone = useTimezone();
 
   const [dayStart, setDayStart] = useState("9");
   const [dayEnd, setDayEnd] = useState("21");
@@ -90,7 +87,7 @@ export function PlannerForm({ friends }: { friends: MiniProfile[] }) {
             id="date_start"
             name="date_start"
             type="date"
-            defaultValue={isoDate(0)}
+            defaultValue={offsetDateInTimezone(0, timezone)}
             required
           />
         </div>
@@ -100,7 +97,7 @@ export function PlannerForm({ friends }: { friends: MiniProfile[] }) {
             id="date_end"
             name="date_end"
             type="date"
-            defaultValue={isoDate(6)}
+            defaultValue={offsetDateInTimezone(6, timezone)}
             required
           />
         </div>

@@ -63,14 +63,18 @@ export default async function EventsPage() {
         </TabsList>
         <TabsContent value="upcoming" className="mt-4 flex flex-col gap-2">
           {upcoming.length > 0 ? (
-            upcoming.map((e) => <EventListItem key={e.id} event={e} />)
+            upcoming.map((e) => (
+              <EventListItem key={e.id} event={e} timezone={profile.timezone} />
+            ))
           ) : (
             <Empty />
           )}
         </TabsContent>
         <TabsContent value="past" className="mt-4 flex flex-col gap-2">
           {past.length > 0 ? (
-            past.map((e) => <EventListItem key={e.id} event={e} />)
+            past.map((e) => (
+              <EventListItem key={e.id} event={e} timezone={profile.timezone} />
+            ))
           ) : (
             <Empty />
           )}

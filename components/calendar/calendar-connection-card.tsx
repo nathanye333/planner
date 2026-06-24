@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
+import { useTimezone } from "@/components/timezone-provider";
 
 const GOOGLE_CALENDAR_SCOPE =
   "https://www.googleapis.com/auth/calendar.readonly";
@@ -21,6 +22,7 @@ export function CalendarConnectionCard({
   hasRefreshToken: boolean;
 }) {
   const [syncing, setSyncing] = useState(false);
+  const timezone = useTimezone();
 
   async function connect() {
     const supabase = createClient();
@@ -68,7 +70,7 @@ export function CalendarConnectionCard({
           <p className="text-sm">
             Connected.{" "}
             {lastSyncedAt
-              ? `Last synced ${formatDateTime(lastSyncedAt)}.`
+              ? `Last synced ${formatDateTime(lastSyncedAt, timezone)}.`
               : "Not synced yet."}
           </p>
         ) : (

@@ -97,7 +97,8 @@ export default async function EventDetailPage({
           <div className="text-muted-foreground flex flex-col gap-1 text-sm">
             <span className="flex items-center gap-2">
               <CalendarClock className="size-4" />
-              {formatDateTime(event.start_at)} — {formatDateTime(event.end_at)}
+              {formatDateTime(event.start_at, profile.timezone)} —{" "}
+              {formatDateTime(event.end_at, profile.timezone)}
             </span>
             {event.location && (
               <span className="flex items-center gap-2">

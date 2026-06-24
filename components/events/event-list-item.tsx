@@ -4,7 +4,13 @@ import type { Tables } from "@/lib/types/database.types";
 import { formatDateTime } from "@/lib/format";
 import { VisibilityBadge } from "./visibility-badge";
 
-export function EventListItem({ event }: { event: Tables<"events"> }) {
+export function EventListItem({
+  event,
+  timezone,
+}: {
+  event: Tables<"events">;
+  timezone: string;
+}) {
   return (
     <Link
       href={`/events/${event.id}`}
@@ -16,7 +22,7 @@ export function EventListItem({ event }: { event: Tables<"events"> }) {
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{event.title}</p>
         <p className="text-muted-foreground flex items-center gap-2 text-xs">
-          <span>{formatDateTime(event.start_at)}</span>
+          <span>{formatDateTime(event.start_at, timezone)}</span>
           {event.location && (
             <span className="flex items-center gap-1">
               <MapPin className="size-3" />

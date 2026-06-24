@@ -57,6 +57,55 @@ export function formatCalendarDate(date: string, timezone: string) {
   });
 }
 
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+/** YYYY-MM-DD that is `offsetDays` from today in the given timezone. */
+export function offsetDateInTimezone(offsetDays: number, timezone: string) {
+  const now = new TZDate(new Date(), timezone);
+  const d = addDays(
+    new TZDate(now.getFullYear(), now.getMonth(), now.getDate(), timezone),
+    offsetDays,
+  );
+  return [d.getFullYear(), pad(d.getMonth() + 1), pad(d.getDate())].join("-");
+}
+
+/** UTC instant → "YYYY-MM-DDTHH:mm" wall-clock in tz for <input type="datetime-local">. */
+export function isoToLocalInput(iso: string, timezone: string) {
+  const d = new TZDate(new Date(iso), timezone);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate(),
+  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** "YYYY-MM-DDTHH:mm" wall-clock in tz → UTC instant ISO for storage. */
+export function localInputToIso(local: string, timezone: string) {
+  const [datePart, timePart = "00:00"] = local.split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [hh, mm] = timePart.split(":").map(Number);
+  return new TZDate(y, m - 1, d, hh, mm, 0, timezone).toISOString();
+}
+
+/** Default new-event inputs in tz: next full hour, lasting two hours. */
+export function defaultEventInputs(timezone: string) {
+  const now = new TZDate(new Date(), timezone);
+  const start = new TZDate(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours() + 1,
+    0,
+    0,
+    timezone,
+  );
+  const end = new TZDate(start.getTime() + 2 * 60 * 60 * 1000, timezone);
+  return {
+    start: isoToLocalInput(start.toISOString(), timezone),
+    end: isoToLocalInput(end.toISOString(), timezone),
+  };
+}
+
 export function formatTimeInTimezone(iso: string, timezone: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",

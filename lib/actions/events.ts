@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { eventSchema } from "@/lib/validations/event";
+import { localInputToIso } from "@/lib/timezone";
 import { fail, ok, type ActionResult } from "./types";
 import type { AvailabilityStatus, RsvpStatus } from "@/lib/constants";
 
@@ -13,6 +14,19 @@ async function authed() {
     data: { user },
   } = await supabase.auth.getUser();
   return { supabase, userId: user?.id };
+}
+
+/** The signed-in user's profile timezone; datetime-local inputs are entered in it. */
+async function userTimezone(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<string> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("timezone")
+    .eq("id", userId)
+    .single();
+  return data?.timezone ?? "UTC";
 }
 
 function availabilityStatusFromRsvp(
@@ -83,8 +97,9 @@ export async function createEvent(
     return fail(parsed.error.issues[0]?.message ?? "Invalid input");
   }
   const v = parsed.data;
-  const startAt = new Date(v.start_at).toISOString();
-  const endAt = new Date(v.end_at).toISOString();
+  const tz = await userTimezone(supabase, userId);
+  const startAt = localInputToIso(v.start_at, tz);
+  const endAt = localInputToIso(v.end_at, tz);
 
   const eventId = crypto.randomUUID();
   const { error } = await supabase
@@ -158,8 +173,9 @@ export async function updateEvent(
   }
   const v = parsed.data;
 
-  const nextStartAt = new Date(v.start_at).toISOString();
-  const nextEndAt = new Date(v.end_at).toISOString();
+  const tz = await userTimezone(supabase, userId);
+  const nextStartAt = localInputToIso(v.start_at, tz);
+  const nextEndAt = localInputToIso(v.end_at, tz);
   const { error } = await supabase
     .from("events")
     .update({

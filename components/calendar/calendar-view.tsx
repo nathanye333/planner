@@ -23,6 +23,7 @@ export function CalendarView({
   onSelect,
   onEventClick,
   height = "auto",
+  timeZone,
 }: {
   events: EventInput[];
   initialView?: "dayGridMonth" | "timeGridWeek" | "listWeek";
@@ -30,11 +31,13 @@ export function CalendarView({
   onSelect?: (arg: DateSelectArg) => void;
   onEventClick?: (arg: EventClickArg) => void;
   height?: number | "auto";
+  timeZone?: string;
 }) {
   return (
     <FullCalendar
       plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
       initialView={initialView}
+      timeZone={timeZone}
       headerToolbar={{
         left: "prev,next today",
         center: "title",

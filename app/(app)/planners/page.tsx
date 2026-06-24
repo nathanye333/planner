@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDate } from "@/lib/format";
+import { formatCalendarDate } from "@/lib/timezone";
 import type { Tables } from "@/lib/types/database.types";
 
 export default async function PlannersPage() {
@@ -53,7 +53,8 @@ export default async function PlannersPage() {
                   <div className="min-w-0">
                     <p className="truncate font-medium">{p.title}</p>
                     <p className="text-muted-foreground text-sm">
-                      {formatDate(p.date_start)} – {formatDate(p.date_end)}
+                      {formatCalendarDate(p.date_start, profile.timezone)} –{" "}
+                      {formatCalendarDate(p.date_end, profile.timezone)}
                     </p>
                   </div>
                 </CardContent>

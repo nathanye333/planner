@@ -14,9 +14,11 @@ import { AVAILABILITY_META } from "@/lib/constants";
 export function GroupCalendar({
   groupId,
   userId,
+  timezone,
 }: {
   groupId: string;
   userId: string;
+  timezone: string;
 }) {
   const supabase = createClient();
 
@@ -58,5 +60,11 @@ export function GroupCalendar({
     },
   });
 
-  return <CalendarView events={events} initialView="dayGridMonth" />;
+  return (
+    <CalendarView
+      events={events}
+      initialView="dayGridMonth"
+      timeZone={timezone}
+    />
+  );
 }
