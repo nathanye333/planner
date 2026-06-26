@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { CalendarView } from "./calendar-view";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,9 @@ import type { Tables } from "@/lib/types/database.types";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 
-const STATUSES: AvailabilityStatus[] = ["free", "tentative", "committed"];
+export type GroupShare = { id: string; name: string };
+
+const STATUSES: AvailabilityStatus[] = ["free", "tentative", "committed", "open"];
 
 type Block = Tables<"availability_blocks">;
 
@@ -42,10 +45,23 @@ function toEvent(b: Block): EventInput {
   };
 }
 
-export function AvailabilityEditor({ userId }: { userId: string }) {
+export function AvailabilityEditor({
+  userId,
+  groups = [],
+}: {
+  userId: string;
+  groups?: GroupShare[];
+}) {
   const supabase = createClient();
   const queryClient = useQueryClient();
-  const [painter, setPainter] = useState<AvailabilityStatus>("committed");
+  const [painter, setPainter] = useState<AvailabilityStatus>("free");
+
+  // Open slot creation state
+  const [pendingSlot, setPendingSlot] = useState<DateSelectArg | null>(null);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState(false);
+
+  // Edit existing block state
   const [selected, setSelected] = useState<{
     id: string;
     status: AvailabilityStatus;
@@ -122,8 +138,54 @@ export function AvailabilityEditor({ userId }: { userId: string }) {
   });
 
   function handleSelect(arg: DateSelectArg) {
-    createBlock.mutate(arg);
-    arg.view.calendar.unselect();
+    if (painter === "open") {
+      // Intercept: show dialog to pick which groups see this slot
+      setPendingSlot(arg);
+      setSelectedGroupIds(new Set());
+    } else {
+      createBlock.mutate(arg);
+      arg.view.calendar.unselect();
+    }
+  }
+
+  async function confirmOpenSlot() {
+    if (!pendingSlot) return;
+    setCreating(true);
+    try {
+      const { data: block, error } = await supabase
+        .from("availability_blocks")
+        .insert({
+          user_id: userId,
+          start_at: pendingSlot.start.toISOString(),
+          end_at: pendingSlot.end.toISOString(),
+          status: "open",
+          source: "manual",
+        })
+        .select("id")
+        .single();
+
+      if (error || !block) throw error ?? new Error("Could not create block");
+
+      if (selectedGroupIds.size > 0) {
+        const { error: shareError } = await supabase
+          .from("availability_block_shares")
+          .insert(
+            [...selectedGroupIds].map((group_id) => ({
+              block_id: block.id,
+              group_id,
+            })),
+          );
+        if (shareError) throw shareError;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["availability", userId] });
+      pendingSlot.view.calendar.unselect();
+      setPendingSlot(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setCreating(false);
+    }
   }
 
   function handleEventClick(arg: EventClickArg) {
@@ -140,12 +202,31 @@ export function AvailabilityEditor({ userId }: { userId: string }) {
     });
   }
 
+  function toggleGroup(id: string) {
+    setSelectedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // While the open-slot dialog is open, show a ghost event so the slot stays visible
+  const ghostEvent: EventInput | null = pendingSlot
+    ? {
+        id: "__pending_open__",
+        start: pendingSlot.start.toISOString(),
+        end: pendingSlot.end.toISOString(),
+        classNames: ["status-open", "opacity-60"],
+        title: "Open slot",
+        editable: false,
+      }
+    : null;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-muted-foreground text-sm">
-          Drag on the calendar to mark time as:
-        </span>
+        <span className="text-muted-foreground text-sm">Mark time as:</span>
         {STATUSES.map((s) => (
           <button
             key={s}
@@ -157,19 +238,89 @@ export function AvailabilityEditor({ userId }: { userId: string }) {
                 : "border-transparent opacity-70 hover:opacity-100",
             )}
           >
-            <span className={cn("size-3 rounded-full", AVAILABILITY_META[s].color)} />
+            <span
+              className={cn(
+                "size-3 rounded-full",
+                AVAILABILITY_META[s].color,
+                s === "open" && "ring-2 ring-offset-1 ring-open",
+              )}
+            />
             {AVAILABILITY_META[s].label}
+            {s === "open" && (
+              <span className="text-muted-foreground font-normal">· invite proposals</span>
+            )}
           </button>
         ))}
       </div>
 
       <CalendarView
-        events={blocks.map(toEvent)}
+        events={[...blocks.map(toEvent), ...(ghostEvent ? [ghostEvent] : [])]}
         selectable
         onSelect={handleSelect}
         onEventClick={handleEventClick}
       />
 
+      {/* Open slot creation dialog */}
+      <Dialog
+        open={!!pendingSlot}
+        onOpenChange={(open) => {
+          if (!open) {
+            pendingSlot?.view.calendar.unselect();
+            setPendingSlot(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Open slot</DialogTitle>
+            {pendingSlot && (
+              <DialogDescription>
+                {formatDateTime(pendingSlot.start.toISOString())} —{" "}
+                {formatDateTime(pendingSlot.end.toISOString())}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {groups.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">Share with groups:</p>
+              {groups.map((g) => (
+                <label
+                  key={g.id}
+                  className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 hover:bg-accent"
+                >
+                  <Checkbox
+                    checked={selectedGroupIds.has(g.id)}
+                    onCheckedChange={() => toggleGroup(g.id)}
+                  />
+                  <span className="text-sm">{g.name}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              You&apos;re not in any groups yet — this slot will be saved but not shared.
+            </p>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                pendingSlot?.view.calendar.unselect();
+                setPendingSlot(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmOpenSlot} disabled={creating}>
+              {creating ? "Saving…" : "Save open slot"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit existing block dialog */}
       <Dialog
         open={!!selected}
         onOpenChange={(open) => !open && setSelected(null)}

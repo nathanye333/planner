@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
 import { AvailabilityEditor } from "@/components/calendar/availability-editor";
+import type { GroupShare } from "@/components/calendar/availability-editor";
 
 type GroupRow = {
   role: string;
@@ -36,6 +37,10 @@ export default async function GroupsPage() {
 
   const groups = (data ?? []) as GroupRow[];
 
+  const groupList: GroupShare[] = groups
+    .filter((r) => r.group !== null)
+    .map(({ group }) => ({ id: group!.id, name: group!.name }));
+
   return (
     <div>
       <PageHeader
@@ -48,7 +53,7 @@ export default async function GroupsPage() {
           <CardTitle className="text-base">My Calendar</CardTitle>
         </CardHeader>
         <CardContent>
-          <AvailabilityEditor userId={profile.id} />
+          <AvailabilityEditor userId={profile.id} groups={groupList} />
         </CardContent>
       </Card>
 

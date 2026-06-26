@@ -62,6 +62,42 @@ export type Database = {
           },
         ]
       }
+      availability_block_shares: {
+        Row: {
+          block_id: string
+          created_at: string
+          group_id: string
+          id: string
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          group_id: string
+          id?: string
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_block_shares_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "availability_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_block_shares_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       availability_blocks: {
         Row: {
           created_at: string
@@ -848,7 +884,7 @@ export type Database = {
         | "rsvp_changed"
         | "group_joined"
         | "photos_uploaded"
-      availability_status: "committed" | "tentative" | "free"
+      availability_status: "committed" | "tentative" | "free" | "open"
       block_source: "google" | "manual"
       comment_target: "event" | "activity"
       group_role: "member" | "admin"
@@ -998,7 +1034,7 @@ export const Constants = {
         "group_joined",
         "photos_uploaded",
       ],
-      availability_status: ["committed", "tentative", "free"],
+      availability_status: ["committed", "tentative", "free", "open"],
       block_source: ["google", "manual"],
       comment_target: ["event", "activity"],
       group_role: ["member", "admin"],

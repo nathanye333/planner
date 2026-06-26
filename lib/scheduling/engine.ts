@@ -20,7 +20,7 @@ export interface SchedulingEngine {
 }
 
 function emptyCounts(): Record<AvailabilityStatus, number> {
-  return { committed: 0, tentative: 0, free: 0 };
+  return { committed: 0, tentative: 0, free: 0, open: 0 };
 }
 
 export class HeuristicSchedulingEngine implements SchedulingEngine {

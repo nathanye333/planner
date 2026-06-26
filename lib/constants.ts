@@ -11,6 +11,7 @@ export const AVAILABILITY_SCORE: Record<AvailabilityStatus, number> = {
   committed: 0,
   tentative: 0.5,
   free: 1,
+  open: 1,
 };
 
 export const AVAILABILITY_META: Record<
@@ -24,6 +25,7 @@ export const AVAILABILITY_META: Record<
     text: "text-tentative",
   },
   committed: { label: "Busy", color: "bg-committed", text: "text-committed" },
+  open: { label: "Open slot", color: "bg-open", text: "text-open" },
 };
 
 export const RSVP_META: Record<RsvpStatus, { label: string; color: string }> = {

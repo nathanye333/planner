@@ -17,6 +17,7 @@ export interface UserBlock {
 }
 
 const RANK: Record<AvailabilityStatus, number> = {
+  open: 0,
   free: 0,
   tentative: 1,
   committed: 2,
