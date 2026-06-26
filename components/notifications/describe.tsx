@@ -50,7 +50,7 @@ export function describeNotification(n: NotificationRow): {
         href:
           payload.target_type === "event" && payload.target_id
             ? `/events/${payload.target_id}`
-            : "/feed",
+            : "/notifications",
       };
     default:
       return { text: "New notification", href: null };

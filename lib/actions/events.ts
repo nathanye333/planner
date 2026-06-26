@@ -33,11 +33,14 @@ export async function createEvent(
       title: v.title,
       description: v.description || null,
       location: v.location || null,
-      cover_url: v.cover_url || null,
       start_at: new Date(v.start_at).toISOString(),
       end_at: new Date(v.end_at).toISOString(),
       visibility: v.visibility,
       group_id: v.visibility === "group" ? v.group_id || null : null,
+      status: v.is_proposal ? "proposed" : "confirmed",
+      lock_mode: v.is_proposal ? (v.lock_mode ?? null) : null,
+      threshold_count: v.is_proposal && v.lock_mode === "threshold" ? (v.threshold_count ?? null) : null,
+      voting_deadline: v.is_proposal && v.voting_deadline ? new Date(v.voting_deadline).toISOString() : null,
     })
     .select("id")
     .single();
@@ -90,7 +93,6 @@ export async function updateEvent(
       title: v.title,
       description: v.description || null,
       location: v.location || null,
-      cover_url: v.cover_url || null,
       start_at: new Date(v.start_at).toISOString(),
       end_at: new Date(v.end_at).toISOString(),
       visibility: v.visibility,
@@ -144,6 +146,108 @@ export async function inviteToEvent(
     { onConflict: "event_id,user_id" },
   );
   if (error) return fail(error.message);
+  revalidatePath(`/events/${eventId}`);
+  return ok();
+}
+
+export type ProposalVote = "yes" | "maybe" | "no";
+
+export async function castVote(
+  eventId: string,
+  vote: ProposalVote,
+): Promise<ActionResult> {
+  const { supabase, userId } = await authed();
+  if (!userId) return fail("Not signed in");
+
+  // Verify the caller is the creator or has been invited — prevents IDOR votes
+  const { data: access } = await supabase
+    .from("events")
+    .select("creator_id, status, lock_mode, threshold_count")
+    .eq("id", eventId)
+    .single();
+
+  if (!access) return fail("Event not found");
+  if (access.status !== "proposed") return fail("Voting is not open for this event");
+
+  if (access.creator_id !== userId) {
+    const { data: invite } = await supabase
+      .from("event_invites")
+      .select("user_id")
+      .eq("event_id", eventId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!invite) return fail("You are not invited to this event");
+  }
+
+  const { error } = await supabase.from("proposal_votes").upsert(
+    { event_id: eventId, user_id: userId, vote, updated_at: new Date().toISOString() },
+    { onConflict: "event_id,user_id" },
+  );
+  if (error) return fail(error.message);
+
+  // Check threshold auto-lock after each vote
+  if (access.lock_mode === "threshold" && access.threshold_count) {
+    const { count } = await supabase
+      .from("proposal_votes")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", eventId)
+      .in("vote", ["yes", "maybe"]);
+
+    if ((count ?? 0) >= access.threshold_count) {
+      await supabase
+        .from("events")
+        .update({ status: "confirmed" })
+        .eq("id", eventId);
+    }
+  }
+
+  revalidatePath(`/events/${eventId}`);
+  return ok();
+}
+
+export async function confirmEvent(eventId: string): Promise<ActionResult> {
+  const { supabase, userId } = await authed();
+  if (!userId) return fail("Not signed in");
+
+  const { data: event } = await supabase
+    .from("events")
+    .select("creator_id, status")
+    .eq("id", eventId)
+    .single();
+
+  if (!event) return fail("Event not found");
+  if (event.creator_id !== userId) return fail("Only the creator can confirm");
+  if (event.status !== "proposed") return fail("Event is not in proposed state");
+
+  const { error } = await supabase
+    .from("events")
+    .update({ status: "confirmed" })
+    .eq("id", eventId);
+  if (error) return fail(error.message);
+
+  revalidatePath(`/events/${eventId}`);
+  return ok();
+}
+
+export async function cancelProposal(eventId: string): Promise<ActionResult> {
+  const { supabase, userId } = await authed();
+  if (!userId) return fail("Not signed in");
+
+  const { data: event } = await supabase
+    .from("events")
+    .select("creator_id")
+    .eq("id", eventId)
+    .single();
+
+  if (!event) return fail("Event not found");
+  if (event.creator_id !== userId) return fail("Only the creator can cancel");
+
+  const { error } = await supabase
+    .from("events")
+    .update({ status: "cancelled" })
+    .eq("id", eventId);
+  if (error) return fail(error.message);
+
   revalidatePath(`/events/${eventId}`);
   return ok();
 }

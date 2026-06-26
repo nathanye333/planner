@@ -12,6 +12,9 @@ import {
   GroupMembers,
   type GroupMember,
 } from "@/components/groups/group-members";
+import { GroupScheduler } from "@/components/groups/group-scheduler";
+import { AvailabilityShareToggle } from "@/components/availability/availability-share-toggle";
+import { getShareStatus } from "@/lib/actions/availability";
 import type { MiniProfile } from "@/components/user-chip";
 
 export default async function GroupDetailPage({
@@ -30,7 +33,7 @@ export default async function GroupDetailPage({
     .maybeSingle();
   if (!group) notFound();
 
-  const [{ data: membersRaw }, { data: friendsRaw }, { data: events }] =
+  const [{ data: membersRaw }, { data: friendsRaw }, { data: events }, isSharing] =
     await Promise.all([
       supabase
         .from("group_members")
@@ -49,6 +52,7 @@ export default async function GroupDetailPage({
         .select("*")
         .eq("group_id", groupId)
         .order("start_at", { ascending: true }),
+      getShareStatus("group", groupId),
     ]);
 
   const members = (membersRaw ?? []).map((m) => ({
@@ -83,11 +87,21 @@ export default async function GroupDetailPage({
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between">
               <CardTitle className="text-base">Shared calendar</CardTitle>
+              <AvailabilityShareToggle
+                recipientType="group"
+                recipientId={groupId}
+                isShared={isSharing}
+              />
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col gap-4">
               <GroupCalendar groupId={group.id} userId={profile.id} />
+              <GroupScheduler
+                groupId={group.id}
+                members={members.map((m) => m.profile)}
+                groupName={group.name}
+              />
             </CardContent>
           </Card>
 

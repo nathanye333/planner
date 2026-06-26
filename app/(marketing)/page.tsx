@@ -11,8 +11,8 @@ const features = [
   },
   {
     icon: Sparkles,
-    title: "When2Meet planner",
-    body: "Pick participants and a date range, then let the heatmap rank the best times automatically.",
+    title: "Propose & vote",
+    body: "Propose an event, let people vote yes/maybe/no, and lock it in automatically when enough are in.",
   },
   {
     icon: Users,
@@ -39,7 +39,7 @@ export default function LandingPage() {
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6">
         <section className="flex flex-col items-center gap-6 py-20 text-center md:py-28">
           <span className="bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs font-medium">
-            When2Meet × TimeTree × Partiful
+            Group scheduling, done right
           </span>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance md:text-6xl">
             Plan together, without giving up your privacy.

@@ -57,7 +57,6 @@ export default async function NewEventPage({
     title: title ?? "",
     description: "",
     location: "",
-    cover_url: null,
     start_at: toLocalInput(start),
     end_at: toLocalInput(end),
     visibility: (group ? "group" : "friends") as Visibility,

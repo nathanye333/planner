@@ -3,6 +3,7 @@ import { CalendarClock, MapPin } from "lucide-react";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { VisibilityBadge } from "@/components/events/visibility-badge";
 import { RsvpButtons } from "@/components/events/rsvp-buttons";
@@ -11,9 +12,11 @@ import { InvitePeople } from "@/components/events/invite-people";
 import { EventAdminMenu } from "@/components/events/event-admin-menu";
 import { EventComments } from "@/components/events/event-comments";
 import { EventPhotos } from "@/components/events/event-photos";
+import { ProposalPanel } from "@/components/events/proposal-panel";
 import { UserChip, type MiniProfile } from "@/components/user-chip";
 import { formatDateTime, initials } from "@/lib/format";
 import type { RsvpStatus } from "@/lib/constants";
+import type { ProposalVote } from "@/lib/actions/events";
 
 export default async function EventDetailPage({
   params,
@@ -36,7 +39,9 @@ export default async function EventDetailPage({
   const creator = event.creator as unknown as MiniProfile;
   const isCreator = event.creator_id === profile.id;
 
-  const [{ data: rsvps }, { data: invites }, { data: friendsRaw }] =
+  const isProposed = event.status === "proposed";
+
+  const [{ data: rsvps }, { data: invites }, { data: friendsRaw }, { data: votes }] =
     await Promise.all([
       supabase
         .from("event_rsvps")
@@ -51,7 +56,18 @@ export default async function EventDetailPage({
           "friend:profiles!friendships_friend_id_fkey(id, display_name, username, avatar_url)",
         )
         .eq("user_id", profile.id),
+      isProposed
+        ? supabase.from("proposal_votes").select("user_id, vote").eq("event_id", eventId)
+        : Promise.resolve({ data: [] }),
     ]);
+
+  const voteCounts = { yes: 0, maybe: 0, no: 0 };
+  let myVote: ProposalVote | null = null;
+  for (const v of votes ?? []) {
+    const voteVal = v.vote as ProposalVote;
+    voteCounts[voteVal] += 1;
+    if (v.user_id === profile.id) myVote = voteVal;
+  }
 
   const counts: Record<RsvpStatus, number> = {
     committed: 0,
@@ -79,14 +95,7 @@ export default async function EventDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      {event.cover_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={event.cover_url}
-          alt={event.title}
-          className="aspect-[3/1] w-full rounded-xl object-cover"
-        />
-      )}
+
 
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
@@ -121,34 +130,53 @@ export default async function EventDetailPage({
 
       <Card>
         <CardHeader className="flex-row items-center justify-between">
-          <CardTitle className="text-base">Your RSVP</CardTitle>
+          <CardTitle className="text-base">
+            {isProposed ? "Vote" : "Your RSVP"}
+          </CardTitle>
           <InvitePeople eventId={event.id} candidates={candidates} />
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <RsvpButtons eventId={event.id} current={myStatus} />
-          <RsvpSummary counts={counts} />
-          {going.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <p className="text-muted-foreground text-xs font-medium">
-                Going
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {going.map((g) => (
-                  <div
-                    key={g.id}
-                    className="flex items-center gap-2 rounded-full border py-1 pr-3 pl-1"
-                  >
-                    <Avatar className="size-6">
-                      <AvatarImage src={g.avatar_url ?? undefined} />
-                      <AvatarFallback className="text-[10px]">
-                        {initials(g.display_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">{g.display_name}</span>
+          {isProposed ? (
+            <ProposalPanel
+              eventId={event.id}
+              myVote={myVote}
+              voteCounts={voteCounts}
+              isCreator={isCreator}
+              lockMode={(event.lock_mode as "threshold" | "manual" | null) ?? null}
+              thresholdCount={event.threshold_count ?? null}
+              votingDeadline={event.voting_deadline ?? null}
+            />
+          ) : (
+            <>
+              {event.status === "cancelled" && (
+                <Badge variant="destructive" className="w-fit">Cancelled</Badge>
+              )}
+              <RsvpButtons eventId={event.id} current={myStatus} />
+              <RsvpSummary counts={counts} />
+              {going.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    Going
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {going.map((g) => (
+                      <div
+                        key={g.id}
+                        className="flex items-center gap-2 rounded-full border py-1 pr-3 pl-1"
+                      >
+                        <Avatar className="size-6">
+                          <AvatarImage src={g.avatar_url ?? undefined} />
+                          <AvatarFallback className="text-[10px]">
+                            {initials(g.display_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{g.display_name}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

@@ -11,6 +11,7 @@ import {
   DeclineRequestButton,
   RemoveFriendButton,
 } from "@/components/friends/friend-actions";
+import { FriendScheduleButton } from "@/components/friends/friend-scheduler";
 
 type RequestRow = {
   id: string;
@@ -88,7 +89,18 @@ export default async function FriendsPage() {
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <UserChip profile={f} />
-                  <RemoveFriendButton friendId={f.id} />
+                  <div className="flex items-center gap-2">
+                    <FriendScheduleButton
+                      friend={f}
+                      currentUser={{
+                        id: profile.id,
+                        display_name: profile.display_name,
+                        username: profile.username,
+                        avatar_url: profile.avatar_url,
+                      }}
+                    />
+                    <RemoveFriendButton friendId={f.id} />
+                  </div>
                 </li>
               ))}
             </ul>

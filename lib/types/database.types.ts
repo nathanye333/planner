@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -157,6 +159,38 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_shares: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          recipient_id: string
+          recipient_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          recipient_id: string
+          recipient_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          recipient_id?: string
+          recipient_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_shares_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -381,10 +415,14 @@ export type Database = {
           group_id: string | null
           id: string
           location: string | null
+          lock_mode: string | null
           start_at: string
+          status: string
+          threshold_count: number | null
           title: string
           updated_at: string
           visibility: Database["public"]["Enums"]["visibility"]
+          voting_deadline: string | null
         }
         Insert: {
           cover_url?: string | null
@@ -395,10 +433,14 @@ export type Database = {
           group_id?: string | null
           id?: string
           location?: string | null
+          lock_mode?: string | null
           start_at: string
+          status?: string
+          threshold_count?: number | null
           title: string
           updated_at?: string
           visibility?: Database["public"]["Enums"]["visibility"]
+          voting_deadline?: string | null
         }
         Update: {
           cover_url?: string | null
@@ -409,10 +451,14 @@ export type Database = {
           group_id?: string | null
           id?: string
           location?: string | null
+          lock_mode?: string | null
           start_at?: string
+          status?: string
+          threshold_count?: number | null
           title?: string
           updated_at?: string
           visibility?: Database["public"]["Enums"]["visibility"]
+          voting_deadline?: string | null
         }
         Relationships: [
           {
@@ -657,6 +703,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auto_share_availability: boolean
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -668,6 +715,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          auto_share_availability?: boolean
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -679,6 +727,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          auto_share_availability?: boolean
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -690,6 +739,48 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      proposal_votes: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          updated_at: string
+          user_id: string
+          vote: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          vote: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          vote?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_votes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reactions: {
         Row: {
@@ -781,20 +872,150 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database["public"]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  T extends keyof DefaultSchema["Tables"],
-> = DefaultSchema["Tables"][T]["Row"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
 export type TablesInsert<
-  T extends keyof DefaultSchema["Tables"],
-> = DefaultSchema["Tables"][T]["Insert"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
 export type TablesUpdate<
-  T extends keyof DefaultSchema["Tables"],
-> = DefaultSchema["Tables"][T]["Update"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
 
 export type Enums<
-  T extends keyof DefaultSchema["Enums"],
-> = DefaultSchema["Enums"][T]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      activity_type: [
+        "event_created",
+        "rsvp_changed",
+        "group_joined",
+        "photos_uploaded",
+      ],
+      availability_status: ["committed", "tentative", "free"],
+      block_source: ["google", "manual"],
+      comment_target: ["event", "activity"],
+      group_role: ["member", "admin"],
+      notification_type: [
+        "friend_request",
+        "friend_accept",
+        "group_invite",
+        "event_invite",
+        "event_update",
+        "rsvp_change",
+        "comment",
+      ],
+      reaction_target: ["event", "activity", "comment", "photo"],
+      reaction_type: ["like", "love", "celebrate", "laugh"],
+      request_status: ["pending", "accepted", "declined"],
+      rsvp_status: ["committed", "tentative", "declined"],
+      visibility: ["private", "friends", "group", "public"],
+    },
+  },
+} as const

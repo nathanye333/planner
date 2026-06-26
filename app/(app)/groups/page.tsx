@@ -4,8 +4,9 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
+import { AvailabilityEditor } from "@/components/calendar/availability-editor";
 
 type GroupRow = {
   role: string;
@@ -20,21 +21,53 @@ export default async function GroupsPage() {
   const profile = await requireProfile();
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("group_members")
-    .select("role, group:groups(id, name, description)")
-    .eq("user_id", profile.id)
-    .order("created_at", { ascending: false });
+  const [{ data }, { count: pendingRequests }] = await Promise.all([
+    supabase
+      .from("group_members")
+      .select("role, group:groups(id, name, description)")
+      .eq("user_id", profile.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("friend_requests")
+      .select("*", { count: "exact", head: true })
+      .eq("recipient_id", profile.id)
+      .eq("status", "pending"),
+  ]);
 
   const groups = (data ?? []) as GroupRow[];
 
   return (
     <div>
       <PageHeader
-        title="Groups"
-        description="Shared calendars for the people you plan with."
-        action={<CreateGroupDialog />}
+        title="Home"
+        description="Your calendar and groups, all in one place."
       />
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">My Calendar</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AvailabilityEditor userId={profile.id} />
+        </CardContent>
+      </Card>
+
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-semibold">Groups</h2>
+        <CreateGroupDialog />
+      </div>
+
+      {(pendingRequests ?? 0) > 0 && (
+        <Link href="/friends">
+          <div className="bg-accent/60 text-accent-foreground mb-5 flex items-center justify-between rounded-lg border px-4 py-2.5 text-sm hover:bg-accent">
+            <span>
+              You have <strong>{pendingRequests}</strong> pending friend{" "}
+              {pendingRequests === 1 ? "request" : "requests"}
+            </span>
+            <span className="text-muted-foreground text-xs">View →</span>
+          </div>
+        </Link>
+      )}
 
       {groups.length === 0 ? (
         <p className="text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">

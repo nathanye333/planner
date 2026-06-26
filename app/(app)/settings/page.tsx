@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarConnectionCard } from "@/components/calendar/calendar-connection-card";
+import { AutoShareToggle } from "@/components/availability/auto-share-toggle";
 import { SettingsForm } from "./settings-form";
 
 export default async function SettingsPage() {
@@ -34,6 +35,15 @@ export default async function SettingsPage() {
         lastSyncedAt={connection?.last_synced_at ?? null}
         hasRefreshToken={!!connection?.refresh_token}
       />
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Availability Privacy</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AutoShareToggle enabled={profile.auto_share_availability ?? false} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

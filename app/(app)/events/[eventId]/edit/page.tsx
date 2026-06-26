@@ -45,7 +45,6 @@ export default async function EditEventPage({
     title: event.title,
     description: event.description ?? "",
     location: event.location ?? "",
-    cover_url: event.cover_url,
     start_at: toLocalInput(event.start_at),
     end_at: toLocalInput(event.end_at),
     visibility: event.visibility as Visibility,

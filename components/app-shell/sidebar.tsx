@@ -12,14 +12,16 @@ export function Sidebar() {
   return (
     <aside className="bg-card hidden w-60 shrink-0 flex-col border-r md:flex">
       <div className="px-6 py-5">
-        <Link href="/dashboard" className="text-xl font-bold tracking-tight">
+        <Link href="/groups" className="text-xl font-bold tracking-tight">
           {APP_NAME}
         </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-1 px-3">
         {NAV_ITEMS.map((item) => {
           const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+            pathname === item.href ||
+            pathname.startsWith(`${item.href}/`) ||
+            (item.href === "/groups" && pathname === "/");
           return (
             <Link
               key={item.href}
@@ -47,7 +49,9 @@ export function MobileNav() {
     <nav className="bg-card flex gap-1 overflow-x-auto border-b px-2 py-2 md:hidden">
       {NAV_ITEMS.map((item) => {
         const active =
-          pathname === item.href || pathname.startsWith(`${item.href}/`);
+          pathname === item.href ||
+          pathname.startsWith(`${item.href}/`) ||
+          (item.href === "/groups" && pathname === "/");
         return (
           <Link
             key={item.href}

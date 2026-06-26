@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CoverUpload } from "@/components/cover-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -27,7 +27,6 @@ export interface EventFormDefaults {
   title: string;
   description: string;
   location: string;
-  cover_url: string | null;
   start_at: string; // datetime-local string
   end_at: string;
   visibility: Visibility;
@@ -52,10 +51,11 @@ export function EventForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const [cover, setCover] = useState<string | null>(defaults.cover_url);
   const [visibility, setVisibility] = useState<Visibility>(defaults.visibility);
   const [groupId, setGroupId] = useState(defaults.group_id);
   const [invitees, setInvitees] = useState<Set<string>>(new Set());
+  const [isProposal, setIsProposal] = useState(false);
+  const [lockMode, setLockMode] = useState<"threshold" | "manual">("manual");
 
   function toggleInvitee(id: string) {
     setInvitees((prev) => {
@@ -67,16 +67,25 @@ export function EventForm({
   }
 
   function onSubmit(formData: FormData) {
+    const thresholdRaw = formData.get("threshold_count");
     const input = {
       title: String(formData.get("title") ?? ""),
       description: String(formData.get("description") ?? ""),
       location: String(formData.get("location") ?? ""),
-      cover_url: cover ?? "",
       start_at: String(formData.get("start_at") ?? ""),
       end_at: String(formData.get("end_at") ?? ""),
       visibility,
       group_id: visibility === "group" ? groupId : "",
       invitee_ids: [...invitees],
+      is_proposal: isProposal,
+      lock_mode: isProposal ? lockMode : undefined,
+      threshold_count:
+        isProposal && lockMode === "threshold" && thresholdRaw
+          ? Number(thresholdRaw)
+          : undefined,
+      voting_deadline: isProposal
+        ? String(formData.get("voting_deadline") ?? "")
+        : "",
     };
 
     startTransition(async () => {
@@ -100,8 +109,6 @@ export function EventForm({
 
   return (
     <form action={onSubmit} className="flex flex-col gap-5">
-      <CoverUpload userId={userId} value={cover} onChange={setCover} />
-
       <div className="grid gap-2">
         <Label htmlFor="title">Title</Label>
         <Input
@@ -142,7 +149,7 @@ export function EventForm({
           id="location"
           name="location"
           defaultValue={defaults.location}
-          placeholder="123 Main St, or a video link"
+          placeholder="123 Main St"
         />
       </div>
 
@@ -216,11 +223,79 @@ export function EventForm({
         </div>
       )}
 
+      {mode === "create" && (
+        <div className="flex flex-col gap-4 rounded-lg border p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Propose this event</p>
+              <p className="text-muted-foreground text-xs">
+                Let invitees vote before the event is confirmed
+              </p>
+            </div>
+            <Switch
+              checked={isProposal}
+              onCheckedChange={setIsProposal}
+            />
+          </div>
+
+          {isProposal && (
+            <div className="flex flex-col gap-4">
+              <div className="grid gap-2">
+                <Label>Lock-in mode</Label>
+                <Select
+                  value={lockMode}
+                  onValueChange={(v) => setLockMode(v as "threshold" | "manual")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">
+                      Creator confirms — you decide when enough people voted
+                    </SelectItem>
+                    <SelectItem value="threshold">
+                      Auto-confirm — locks in when a minimum headcount is reached
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {lockMode === "threshold" && (
+                <div className="grid gap-2">
+                  <Label htmlFor="threshold_count">Minimum people needed</Label>
+                  <Input
+                    id="threshold_count"
+                    name="threshold_count"
+                    type="number"
+                    min={2}
+                    placeholder="e.g. 5"
+                  />
+                </div>
+              )}
+
+              <div className="grid gap-2">
+                <Label htmlFor="voting_deadline">
+                  Voting deadline{" "}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="voting_deadline"
+                  name="voting_deadline"
+                  type="datetime-local"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <Button type="submit" disabled={pending} className="w-fit">
         {pending
           ? "Saving…"
           : mode === "create"
-            ? "Create event"
+            ? isProposal
+              ? "Propose event"
+              : "Create event"
             : "Save changes"}
       </Button>
     </form>
