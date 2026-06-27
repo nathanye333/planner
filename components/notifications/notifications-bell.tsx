@@ -11,6 +11,7 @@ import type { NotificationRow } from "./describe";
 export function NotificationsBell({ userId }: { userId: string }) {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const timezone = useTimezone();
 
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications"],

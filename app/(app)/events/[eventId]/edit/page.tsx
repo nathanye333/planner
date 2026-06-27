@@ -9,12 +9,7 @@ import {
 } from "@/components/events/event-form";
 import type { MiniProfile } from "@/components/user-chip";
 import type { Visibility } from "@/lib/constants";
-
-function toLocalInput(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+import { isoToLocalInput } from "@/lib/timezone";
 
 export default async function EditEventPage({
   params,

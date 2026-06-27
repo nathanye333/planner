@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials, timeAgo } from "@/lib/format";
+import { useTimezone } from "@/components/timezone-provider";
 import type { Tables } from "@/lib/types/database.types";
 
 type CommentRow = Tables<"comments"> & {
@@ -29,6 +30,7 @@ export function EventComments({
 }) {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const timezone = useTimezone();
   const [body, setBody] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
@@ -124,7 +126,7 @@ export function EventComments({
             <p className="text-sm whitespace-pre-wrap">{c.body}</p>
           </div>
           <div className="text-muted-foreground mt-1 flex items-center gap-3 text-xs">
-            <span>{timeAgo(c.created_at)}</span>
+            <span>{timeAgo(c.created_at, timezone)}</span>
             {!c.parent_id && (
               <button
                 onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}

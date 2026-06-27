@@ -23,6 +23,7 @@ import {
 import type { Tables } from "@/lib/types/database.types";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
+import { useTimezone } from "@/components/timezone-provider";
 
 export type GroupShare = { id: string; name: string };
 
@@ -87,8 +88,8 @@ export function AvailabilityEditor({
     mutationFn: async (arg: DateSelectArg) => {
       const { error } = await supabase.from("availability_blocks").insert({
         user_id: userId,
-        start_at: arg.start.toISOString(),
-        end_at: arg.end.toISOString(),
+        start_at: new Date(arg.startStr).toISOString(),
+        end_at: new Date(arg.endStr).toISOString(),
         status: painter,
         source: "manual",
       });
@@ -197,8 +198,8 @@ export function AvailabilityEditor({
       id: arg.event.id,
       status: props.status,
       source: props.source,
-      start: arg.event.start?.toISOString() ?? "",
-      end: arg.event.end?.toISOString() ?? "",
+      start: arg.event.startStr,
+      end: arg.event.endStr,
     });
   }
 
@@ -258,6 +259,7 @@ export function AvailabilityEditor({
         selectable
         onSelect={handleSelect}
         onEventClick={handleEventClick}
+        timeZone={timezone}
       />
 
       {/* Open slot creation dialog */}
@@ -330,7 +332,7 @@ export function AvailabilityEditor({
             <DialogTitle>Update availability</DialogTitle>
             {selected && (
               <DialogDescription>
-                {formatDateTime(selected.start)}
+                {formatDateTime(selected.start, timezone)}
                 {selected.source === "google" &&
                   " · synced from Google Calendar"}
               </DialogDescription>

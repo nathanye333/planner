@@ -25,9 +25,11 @@ export async function createPlanner(
   }
   const v = parsed.data;
 
-  const { data: planner, error } = await supabase
+  const plannerId = crypto.randomUUID();
+  const { error } = await supabase
     .from("availability_planners")
     .insert({
+      id: plannerId,
       creator_id: userId,
       title: v.title,
       date_start: v.date_start,
@@ -37,10 +39,8 @@ export async function createPlanner(
       slot_minutes: v.slot_minutes,
       group_id: v.group_id || null,
     })
-    .select("id")
-    .single();
-  if (error || !planner) {
-    return fail(error?.message ?? "Could not create planner");
+  if (error) {
+    return fail(error.message);
   }
 
   const ids = new Set(v.participant_ids ?? []);
@@ -54,11 +54,11 @@ export async function createPlanner(
   ids.add(userId);
 
   await supabase.from("planner_participants").insert(
-    [...ids].map((uid) => ({ planner_id: planner.id, user_id: uid })),
+    [...ids].map((uid) => ({ planner_id: plannerId, user_id: uid })),
   );
 
   revalidatePath("/planners");
-  return ok({ id: planner.id });
+  return ok({ id: plannerId });
 }
 
 export async function deletePlanner(plannerId: string): Promise<ActionResult> {

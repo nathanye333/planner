@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials, timeAgo } from "@/lib/format";
+import { useTimezone } from "@/components/timezone-provider";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/lib/types/database.types";
 import type { Enums } from "@/lib/types/database.types";
@@ -73,6 +74,7 @@ function describe(a: ActivityRow): { text: string; href: string | null } {
 export function Feed({ userId }: { userId: string }) {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const timezone = useTimezone();
 
   const { data: activities = [] } = useQuery({
     queryKey: ["feed"],
@@ -190,7 +192,7 @@ export function Feed({ userId }: { userId: string }) {
                     )}
                   </div>
                   <span className="text-muted-foreground text-xs">
-                    {timeAgo(a.created_at)}
+                    {timeAgo(a.created_at, timezone)}
                   </span>
                 </div>
                 <button

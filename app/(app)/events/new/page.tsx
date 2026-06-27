@@ -8,11 +8,7 @@ import {
 } from "@/components/events/event-form";
 import type { MiniProfile } from "@/components/user-chip";
 import type { Visibility } from "@/lib/constants";
-
-function toLocalInput(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
+import { defaultEventInputs, isoToLocalInput } from "@/lib/timezone";
 
 export default async function NewEventPage({
   searchParams,
@@ -48,10 +44,13 @@ export default async function NewEventPage({
     .map((g) => g.group as { id: string; name: string } | null)
     .filter((g): g is { id: string; name: string } => !!g);
 
-  const start = startParam ? new Date(startParam) : new Date();
-  if (!startParam) start.setHours(start.getHours() + 1, 0, 0, 0);
-  const end = endParam ? new Date(endParam) : new Date(start);
-  if (!endParam) end.setHours(end.getHours() + 2);
+  const fallback = defaultEventInputs(profile.timezone);
+  const startInput = startParam
+    ? isoToLocalInput(startParam, profile.timezone)
+    : fallback.start;
+  const endInput = endParam
+    ? isoToLocalInput(endParam, profile.timezone)
+    : fallback.end;
 
   const defaults: EventFormDefaults = {
     title: title ?? "",

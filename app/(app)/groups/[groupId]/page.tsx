@@ -111,7 +111,13 @@ export default async function GroupDetailPage({
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
               {events && events.length > 0 ? (
-                events.map((e) => <EventListItem key={e.id} event={e} />)
+                events.map((e) => (
+                  <EventListItem
+                    key={e.id}
+                    event={e}
+                    timezone={profile.timezone}
+                  />
+                ))
               ) : (
                 <p className="text-muted-foreground py-6 text-center text-sm">
                   No events yet.
