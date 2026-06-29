@@ -23,6 +23,7 @@ import {
 import type { Tables } from "@/lib/types/database.types";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
+import { utcIsoFromFullCalendar } from "@/lib/timezone";
 import { useTimezone } from "@/components/timezone-provider";
 
 const STATUSES: AvailabilityStatus[] = ["free", "tentative", "committed"];
@@ -76,8 +77,8 @@ export function AvailabilityEditor({ userId }: { userId: string }) {
     mutationFn: async (arg: DateSelectArg) => {
       const { error } = await supabase.from("availability_blocks").insert({
         user_id: userId,
-        start_at: new Date(arg.startStr).toISOString(),
-        end_at: new Date(arg.endStr).toISOString(),
+        start_at: utcIsoFromFullCalendar(arg.start, timezone),
+        end_at: utcIsoFromFullCalendar(arg.end, timezone),
         status: painter,
         source: "manual",
       });
@@ -140,8 +141,8 @@ export function AvailabilityEditor({ userId }: { userId: string }) {
       id: arg.event.id,
       status: props.status,
       source: props.source,
-      start: arg.event.startStr,
-      end: arg.event.endStr,
+      start: utcIsoFromFullCalendar(arg.event.start!, timezone),
+      end: utcIsoFromFullCalendar(arg.event.end!, timezone),
     });
   }
 

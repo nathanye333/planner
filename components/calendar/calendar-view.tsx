@@ -10,6 +10,20 @@ import type {
   EventClickArg,
   EventInput,
 } from "@fullcalendar/core";
+import { utcIsoForFullCalendar } from "@/lib/timezone";
+
+function calendarEvents(events: EventInput[], timezone?: string): EventInput[] {
+  if (!timezone || timezone === "UTC") return events;
+  return events.map((event) => ({
+    ...event,
+    start: event.start
+      ? utcIsoForFullCalendar(String(event.start), timezone)
+      : event.start,
+    end: event.end
+      ? utcIsoForFullCalendar(String(event.end), timezone)
+      : event.end,
+  }));
+}
 
 /**
  * Thin FullCalendar wrapper providing month / week / agenda views with the
@@ -49,7 +63,7 @@ export function CalendarView({
         week: "Week",
         list: "Agenda",
       }}
-      events={events}
+      events={calendarEvents(events, timeZone)}
       selectable={selectable}
       selectMirror={selectable}
       select={onSelect}
