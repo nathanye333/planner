@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   AVAILABILITY_META,
+  normalizeAvailabilityStatus,
   type AvailabilityStatus,
 } from "@/lib/constants";
 import type { Tables } from "@/lib/types/database.types";
@@ -29,12 +30,14 @@ const STATUSES: AvailabilityStatus[] = ["free", "tentative", "committed"];
 type Block = Tables<"availability_blocks">;
 
 function toEvent(b: Block): EventInput {
+  const status = normalizeAvailabilityStatus(b.status);
+  const meta = AVAILABILITY_META[status];
   return {
     id: b.id,
-    title: b.title ?? AVAILABILITY_META[b.status].label,
+    title: b.title ?? meta.label,
     start: b.start_at,
     end: b.end_at,
-    classNames: [`status-${b.status}`],
+    classNames: [`status-${status}`],
     extendedProps: {
       status: b.status,
       source: b.source,

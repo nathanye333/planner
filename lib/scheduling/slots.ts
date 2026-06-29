@@ -1,6 +1,6 @@
 import { TZDate } from "@date-fns/tz";
 import { addDays } from "date-fns";
-import type { AvailabilityStatus } from "@/lib/constants";
+import { normalizeAvailabilityStatus, type AvailabilityStatus } from "@/lib/constants";
 import type { AvailabilityInput, SlotAvailability } from "./types";
 
 export interface PlannerWindow {
@@ -79,8 +79,9 @@ export function buildAvailabilityInput(
         for (const b of userBlocks) {
           const bStart = new Date(b.start_at).getTime();
           const bEnd = new Date(b.end_at).getTime();
-          if (bStart < end && bEnd > start && RANK[b.status] > RANK[status]) {
-            status = b.status;
+          const blockStatus = normalizeAvailabilityStatus(b.status);
+          if (bStart < end && bEnd > start && RANK[blockStatus] > RANK[status]) {
+            status = blockStatus;
           }
         }
         return { userId, status };

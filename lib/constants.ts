@@ -26,6 +26,20 @@ export const AVAILABILITY_META: Record<
   committed: { label: "Busy", color: "bg-committed", text: "text-committed" },
 };
 
+/** Safe lookup for rows that may carry legacy or unexpected status values. */
+export function normalizeAvailabilityStatus(
+  status: string | null | undefined,
+): AvailabilityStatus {
+  if (status && status in AVAILABILITY_META) {
+    return status as AvailabilityStatus;
+  }
+  return "committed";
+}
+
+export function getAvailabilityMeta(status: string | null | undefined) {
+  return AVAILABILITY_META[normalizeAvailabilityStatus(status)];
+}
+
 export const RSVP_META: Record<RsvpStatus, { label: string; color: string }> = {
   committed: { label: "Going", color: "bg-free" },
   tentative: { label: "Maybe", color: "bg-tentative" },
