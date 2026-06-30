@@ -9,7 +9,20 @@ import type {
   EventHoveringArg,
   EventInput,
 } from "@fullcalendar/core";
-import { dayAfterDate } from "@/lib/timezone";
+import { dayAfterDate, utcIsoForFullCalendar } from "@/lib/timezone";
+
+function calendarEvents(events: EventInput[], timezone: string): EventInput[] {
+  if (timezone === "UTC") return events;
+  return events.map((event) => ({
+    ...event,
+    start: event.start
+      ? utcIsoForFullCalendar(String(event.start), timezone)
+      : event.start,
+    end: event.end
+      ? utcIsoForFullCalendar(String(event.end), timezone)
+      : event.end,
+  }));
+}
 
 function hourToTime(hour: number) {
   return `${String(hour).padStart(2, "0")}:00:00`;
@@ -69,7 +82,7 @@ export function PlannerCalendarView({
           right: "",
         }}
         buttonText={{ today: "Today" }}
-        events={events}
+        events={calendarEvents(events, timezone)}
         eventClick={onEventClick}
         eventMouseEnter={onEventMouseEnter}
         eventMouseLeave={onEventMouseLeave}

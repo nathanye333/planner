@@ -18,11 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import {
   AVAILABILITY_META,
+  normalizeAvailabilityStatus,
   type AvailabilityStatus,
 } from "@/lib/constants";
 import type { Tables } from "@/lib/types/database.types";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
+import { utcIsoFromFullCalendar } from "@/lib/timezone";
 import { useTimezone } from "@/components/timezone-provider";
 
 export type GroupShare = { id: string; name: string };
@@ -32,12 +34,14 @@ const STATUSES: AvailabilityStatus[] = ["free", "tentative", "committed", "open"
 type Block = Tables<"availability_blocks">;
 
 function toEvent(b: Block): EventInput {
+  const status = normalizeAvailabilityStatus(b.status);
+  const meta = AVAILABILITY_META[status];
   return {
     id: b.id,
-    title: b.title ?? AVAILABILITY_META[b.status].label,
+    title: b.title ?? meta.label,
     start: b.start_at,
     end: b.end_at,
-    classNames: [`status-${b.status}`],
+    classNames: [`status-${status}`],
     extendedProps: {
       status: b.status,
       source: b.source,
@@ -88,8 +92,8 @@ export function AvailabilityEditor({
     mutationFn: async (arg: DateSelectArg) => {
       const { error } = await supabase.from("availability_blocks").insert({
         user_id: userId,
-        start_at: new Date(arg.startStr).toISOString(),
-        end_at: new Date(arg.endStr).toISOString(),
+        start_at: utcIsoFromFullCalendar(arg.start, timezone),
+        end_at: utcIsoFromFullCalendar(arg.end, timezone),
         status: painter,
         source: "manual",
       });
@@ -198,8 +202,8 @@ export function AvailabilityEditor({
       id: arg.event.id,
       status: props.status,
       source: props.source,
-      start: arg.event.startStr,
-      end: arg.event.endStr,
+      start: utcIsoFromFullCalendar(arg.event.start!, timezone),
+      end: utcIsoFromFullCalendar(arg.event.end!, timezone),
     });
   }
 

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { EventInput } from "@fullcalendar/core";
 import { createClient } from "@/lib/supabase/client";
 import { CalendarView } from "./calendar-view";
-import { AVAILABILITY_META } from "@/lib/constants";
+import { AVAILABILITY_META, normalizeAvailabilityStatus } from "@/lib/constants";
 
 /**
  * Shared group calendar: overlays the viewer's own availability (as background
@@ -54,14 +54,17 @@ export function GroupCalendar({
         borderColor: "var(--primary)",
       }));
 
-      const myBlockItems: EventInput[] = (myBlocks ?? []).map((b) => ({
-        id: `block-${b.id}`,
-        title: AVAILABILITY_META[b.status].label,
-        start: b.start_at,
-        end: b.end_at,
-        display: "background",
-        classNames: [`status-${b.status}`],
-      }));
+      const myBlockItems: EventInput[] = (myBlocks ?? []).map((b) => {
+        const status = normalizeAvailabilityStatus(b.status);
+        return {
+          id: `block-${b.id}`,
+          title: AVAILABILITY_META[status].label,
+          start: b.start_at,
+          end: b.end_at,
+          display: "background",
+          classNames: [`status-${status}`],
+        };
+      });
 
       // Dedupe by block id (a member may share the same block with multiple groups)
       const seen = new Set<string>();

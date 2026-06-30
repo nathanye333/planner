@@ -71,6 +71,38 @@ export function offsetDateInTimezone(offsetDays: number, timezone: string) {
   return [d.getFullYear(), pad(d.getMonth() + 1), pad(d.getDate())].join("-");
 }
 
+/**
+ * FullCalendar named timezones without a TZ plugin use "UTC-coercion": wall-clock
+ * times in `timezone` are represented as UTC on native Date objects. Convert real
+ * UTC instants from storage into that shape for calendar rendering.
+ */
+export function utcIsoForFullCalendar(iso: string, timezone: string) {
+  const d = new TZDate(new Date(iso), timezone);
+  return new Date(
+    Date.UTC(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      d.getHours(),
+      d.getMinutes(),
+      d.getSeconds(),
+    ),
+  ).toISOString();
+}
+
+/** Inverse of {@link utcIsoForFullCalendar} — calendar selection → DB UTC instant. */
+export function utcIsoFromFullCalendar(date: Date, timezone: string) {
+  return new TZDate(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    timezone,
+  ).toISOString();
+}
+
 /** UTC instant → "YYYY-MM-DDTHH:mm" wall-clock in tz for <input type="datetime-local">. */
 export function isoToLocalInput(iso: string, timezone: string) {
   const d = new TZDate(new Date(iso), timezone);
