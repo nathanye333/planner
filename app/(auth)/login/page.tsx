@@ -22,7 +22,7 @@ export default async function LoginPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) redirect("/groups");
+  if (user) redirect("/calendar");
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">

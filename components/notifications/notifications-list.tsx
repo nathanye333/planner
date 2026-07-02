@@ -8,10 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { describeNotification, type NotificationRow } from "./describe";
+import { useTimezone } from "@/components/timezone-provider";
 
 export function NotificationsList({ userId }: { userId: string }) {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const timezone = useTimezone();
 
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications"],
@@ -77,7 +79,7 @@ export function NotificationsList({ userId }: { userId: string }) {
             <div className="flex-1 text-sm">
               <p>{text}</p>
               <span className="text-muted-foreground text-xs">
-                {timeAgo(n.created_at)}
+                {timeAgo(n.created_at, timezone)}
               </span>
             </div>
             {!n.read_at && (

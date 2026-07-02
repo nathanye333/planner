@@ -13,7 +13,8 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/groups", label: "Home", icon: Users },
+  { href: "/calendar", label: "My Planner", icon: CalendarRange },
+  { href: "/groups", label: "Groups", icon: Users },
   { href: "/events", label: "Events", icon: CalendarRange },
   { href: "/friends", label: "Friends", icon: UserRound },
   { href: "/settings", label: "Settings", icon: Settings },

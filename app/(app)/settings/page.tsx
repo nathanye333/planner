@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarConnectionCard } from "@/components/calendar/calendar-connection-card";
-import { AutoShareToggle } from "@/components/availability/auto-share-toggle";
+import { AvailabilityModeToggle } from "@/components/availability/availability-mode-toggle";
 import { SettingsForm } from "./settings-form";
 
 export default async function SettingsPage() {
@@ -41,7 +41,9 @@ export default async function SettingsPage() {
           <CardTitle className="text-base">Availability Privacy</CardTitle>
         </CardHeader>
         <CardContent>
-          <AutoShareToggle enabled={profile.auto_share_availability ?? false} />
+          <AvailabilityModeToggle
+            mode={(profile.availability_mode as "manual" | "auto_free" | null) ?? "manual"}
+          />
         </CardContent>
       </Card>
     </div>

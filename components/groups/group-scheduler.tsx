@@ -10,6 +10,8 @@ import { schedulingEngine } from "@/lib/scheduling/engine";
 import type { SlotAvailability } from "@/lib/scheduling/types";
 import type { MiniProfile } from "@/components/user-chip";
 import type { AvailabilityStatus } from "@/lib/constants";
+import { useTimezone } from "@/components/timezone-provider";
+import { offsetDateInTimezone } from "@/lib/timezone";
 
 const SLOT_MINUTES = 30;
 const DAY_START_HOUR = 8;
@@ -18,6 +20,7 @@ const DAY_END_HOUR = 22;
 function buildSlots(
   blocks: { start_at: string; end_at: string; user_id: string; status: string }[],
   memberIds: string[],
+  autoFreeMemberIds: Set<string>,
 ): SlotAvailability[] {
   const now = new Date();
   const startDate = new Date(now);
@@ -37,7 +40,9 @@ function buildSlots(
       slotMap.set(key, {
         start: cursor.toISOString(),
         end: end.toISOString(),
-        participants: memberIds.map((id) => ({ userId: id, status: "free" as AvailabilityStatus })),
+        participants: memberIds
+          .filter((id) => autoFreeMemberIds.has(id))
+          .map((id) => ({ userId: id, status: "free" as AvailabilityStatus })),
       });
     }
     cursor = new Date(cursor);
@@ -51,11 +56,13 @@ function buildSlots(
       const slotStart = new Date(slot.start).getTime();
       const slotEnd = new Date(slot.end).getTime();
       if (slotStart >= blockStart && slotEnd <= blockEnd) {
-        slot.participants = slot.participants.map((p) =>
-          p.userId === block.user_id
-            ? { ...p, status: block.status as AvailabilityStatus }
-            : p,
-        );
+        const status = block.status as AvailabilityStatus;
+        const hasParticipant = slot.participants.some((p) => p.userId === block.user_id);
+        slot.participants = hasParticipant
+          ? slot.participants.map((p) =>
+              p.userId === block.user_id ? { ...p, status } : p,
+            )
+          : [...slot.participants, { userId: block.user_id, status }];
         slotMap.set(key, slot);
       }
     }
@@ -75,6 +82,9 @@ export function GroupScheduler({
 }) {
   const [open, setOpen] = useState(false);
   const supabase = createClient();
+  const timezone = useTimezone();
+  const dateStart = offsetDateInTimezone(0, timezone);
+  const dateEnd = offsetDateInTimezone(13, timezone);
 
   const memberIds = members.map((m) => m.id);
 
@@ -90,9 +100,21 @@ export function GroupScheduler({
     },
   });
 
+  const { data: autoFreeMemberIds = new Set<string>() } = useQuery({
+    queryKey: ["group-availability-modes", groupId],
+    enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, availability_mode")
+        .in("id", memberIds);
+      return new Set((data ?? []).filter((p) => p.availability_mode === "auto_free").map((p) => p.id));
+    },
+  });
+
   const profilesById = Object.fromEntries(members.map((m) => [m.id, m]));
 
-  const slots = buildSlots(blocks, memberIds);
+  const slots = buildSlots(blocks, memberIds, autoFreeMemberIds);
   const ranked = schedulingEngine.calculateAvailability({
     slots,
     participantCount: members.length,
@@ -126,6 +148,13 @@ export function GroupScheduler({
               participantCount={members.length}
               profilesById={profilesById}
               plannerTitle={groupName}
+              slotMinutes={SLOT_MINUTES}
+              dayStartHour={DAY_START_HOUR}
+              dayEndHour={DAY_END_HOUR}
+              dateStart={dateStart}
+              dateEnd={dateEnd}
+              timezone={timezone}
+              groupId={groupId}
             />
           )}
         </div>

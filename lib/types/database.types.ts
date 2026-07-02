@@ -66,20 +66,23 @@ export type Database = {
         Row: {
           block_id: string
           created_at: string
-          group_id: string
           id: string
+          recipient_id: string
+          recipient_type: string
         }
         Insert: {
           block_id: string
           created_at?: string
-          group_id: string
           id?: string
+          recipient_id: string
+          recipient_type: string
         }
         Update: {
           block_id?: string
           created_at?: string
-          group_id?: string
           id?: string
+          recipient_id?: string
+          recipient_type?: string
         }
         Relationships: [
           {
@@ -87,13 +90,6 @@ export type Database = {
             columns: ["block_id"]
             isOneToOne: false
             referencedRelation: "availability_blocks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "availability_block_shares_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]
@@ -195,38 +191,6 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      availability_shares: {
-        Row: {
-          created_at: string
-          id: string
-          owner_id: string
-          recipient_id: string
-          recipient_type: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          owner_id: string
-          recipient_id: string
-          recipient_type: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          owner_id?: string
-          recipient_id?: string
-          recipient_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "availability_shares_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -739,7 +703,7 @@ export type Database = {
       }
       profiles: {
         Row: {
-          auto_share_availability: boolean
+          availability_mode: string
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -751,7 +715,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
-          auto_share_availability?: boolean
+          availability_mode?: string
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -763,7 +727,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
-          auto_share_availability?: boolean
+          availability_mode?: string
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -867,6 +831,10 @@ export type Database = {
         Returns: boolean
       }
       can_view_event: { Args: { eid: string; uid: string }; Returns: boolean }
+      is_block_shared_with: {
+        Args: { bid: string; viewer: string }
+        Returns: boolean
+      }
       is_event_creator: { Args: { eid: string; uid: string }; Returns: boolean }
       is_friend: { Args: { a: string; b: string }; Returns: boolean }
       is_group_admin: { Args: { gid: string; uid: string }; Returns: boolean }
@@ -884,7 +852,7 @@ export type Database = {
         | "rsvp_changed"
         | "group_joined"
         | "photos_uploaded"
-      availability_status: "committed" | "tentative" | "free" | "open"
+      availability_status: "committed" | "tentative" | "free"
       block_source: "google" | "manual"
       comment_target: "event" | "activity"
       group_role: "member" | "admin"
@@ -1034,7 +1002,7 @@ export const Constants = {
         "group_joined",
         "photos_uploaded",
       ],
-      availability_status: ["committed", "tentative", "free", "open"],
+      availability_status: ["committed", "tentative", "free"],
       block_source: ["google", "manual"],
       comment_target: ["event", "activity"],
       group_role: ["member", "admin"],

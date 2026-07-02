@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { EventContentArg, EventHoveringArg } from "@fullcalendar/core";
-import { CalendarPlus, MousePointer2, Sparkles } from "lucide-react";
+import { CalendarPlus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlannerCalendarView } from "@/components/planner/planner-calendar-view";
 import { AVAILABILITY_META, type AvailabilityStatus } from "@/lib/constants";
@@ -35,6 +35,7 @@ export function AvailabilityGrid({
   dateStart,
   dateEnd,
   timezone,
+  groupId,
 }: {
   slots: RankedSlot[];
   participantCount: number;
@@ -46,6 +47,7 @@ export function AvailabilityGrid({
   dateStart: string;
   dateEnd: string;
   timezone: string;
+  groupId?: string;
 }) {
   const [hovered, setHovered] = useState<RankedSlot | null>(null);
   const [pinned, setPinned] = useState<RankedSlot | null>(null);
@@ -230,26 +232,16 @@ export function AvailabilityGrid({
                     active.start,
                   )}&end=${encodeURIComponent(
                     active.end,
-                  )}&title=${encodeURIComponent(plannerTitle)}`}
+                  )}&title=${encodeURIComponent(plannerTitle)}${
+                    groupId ? `&group=${encodeURIComponent(groupId)}` : ""
+                  }`}
                 >
                   <CalendarPlus className="size-4" />
                   Create event at this time
                 </Link>
               </Button>
             </div>
-          ) : (
-            <div className="text-muted-foreground flex flex-col items-start gap-2 text-sm">
-              <MousePointer2 className="size-5" />
-              <p>
-                Hover over the calendar to see who&apos;s free, tentative, or
-                busy. Darker green means more people are available.
-              </p>
-              <p className="text-xs">
-                {participantCount} participant
-                {participantCount === 1 ? "" : "s"}
-              </p>
-            </div>
-          )}
+          ) : null}
         </aside>
       </div>
     </div>

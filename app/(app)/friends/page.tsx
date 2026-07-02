@@ -70,12 +70,16 @@ export default async function FriendsPage() {
       />
 
       <Tabs defaultValue="friends">
-        <TabsList>
-          <TabsTrigger value="friends">Friends ({friends.length})</TabsTrigger>
-          <TabsTrigger value="requests">
+        <TabsList className="gap-1">
+          <TabsTrigger value="friends" className="flex-none px-4">
+            Friends ({friends.length})
+          </TabsTrigger>
+          <TabsTrigger value="requests" className="flex-none px-4">
             Requests ({incoming.length})
           </TabsTrigger>
-          <TabsTrigger value="find">Find</TabsTrigger>
+          <TabsTrigger value="find" className="flex-none px-4">
+            Find
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="friends" className="mt-4">

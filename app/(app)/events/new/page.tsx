@@ -56,11 +56,13 @@ export default async function NewEventPage({
     title: title ?? "",
     description: "",
     location: "",
-    start_at: toLocalInput(start),
-    end_at: toLocalInput(end),
+    start_at: startInput,
+    end_at: endInput,
     visibility: (group ? "group" : "friends") as Visibility,
     group_id: group ?? "",
   };
+
+  const defaultIsProposal = !!(group && startParam && endParam);
 
   return (
     <div>
@@ -73,6 +75,7 @@ export default async function NewEventPage({
             groups={groups}
             mode="create"
             defaults={defaults}
+            defaultIsProposal={defaultIsProposal}
           />
         </CardContent>
       </Card>
