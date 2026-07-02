@@ -1,0 +1,126 @@
+.marketing {
+  --ink: #12151a;
+  --ink-soft: #1c2028;
+  --paper: #f6f5f1;
+  --paper-dim: #ece9e1;
+  --line: #ddd9cd;
+  --line-dark: #2a2f38;
+  --ink-text: #f3f1ea;
+  --ink-text-dim: #a9aca9;
+  --paper-text: #12151a;
+  --paper-text-dim: #5c5f5a;
+
+  --grid-empty: #e2dfd5;
+  --grid-empty-dark: #232830;
+  --free: #2f8f5b;
+  --free-strong: #1f6d43;
+  --amber: #c8862c;
+  --brick: #b0432c;
+
+  font-family: var(--font-body), system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--paper-text);
+}
+
+.marketing .font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.marketing .band-ink {
+  background: var(--ink);
+  color: var(--ink-text);
+}
+
+.marketing .band-ink .dim {
+  color: var(--ink-text-dim);
+}
+
+.marketing .band-paper .dim {
+  color: var(--paper-text-dim);
+}
+
+/* ---- Signature hero grid ---- */
+
+.hero-grid {
+  --cols: 7;
+  --rows: 7;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: 3px;
+}
+
+.hero-grid-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 3px;
+  background: var(--grid-empty-dark);
+  animation: cellFill 2600ms ease-out forwards;
+  animation-delay: calc(var(--d) * 1ms);
+}
+
+.hero-grid-cell[data-level="1"] {
+  --fill: color-mix(in oklab, var(--free) 22%, var(--grid-empty-dark));
+}
+.hero-grid-cell[data-level="2"] {
+  --fill: color-mix(in oklab, var(--free) 45%, var(--grid-empty-dark));
+}
+.hero-grid-cell[data-level="3"] {
+  --fill: color-mix(in oklab, var(--free) 70%, var(--grid-empty-dark));
+}
+.hero-grid-cell[data-level="4"] {
+  --fill: var(--free);
+}
+.hero-grid-cell[data-level="0"] {
+  --fill: var(--grid-empty-dark);
+}
+
+@keyframes cellFill {
+  0% {
+    background: var(--grid-empty-dark);
+  }
+  100% {
+    background: var(--fill);
+  }
+}
+
+.hero-grid-cell.is-best {
+  position: relative;
+  animation:
+    cellFill 2600ms ease-out forwards,
+    bestPulse 2000ms ease-in-out 2700ms 2;
+}
+
+@keyframes bestPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--free-strong) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in oklab, var(--free-strong) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-grid-cell {
+    animation: none !important;
+    background: var(--fill, var(--grid-empty-dark));
+  }
+}
+
+/* ---- Mock UI screenshots ---- */
+
+.mock-frame {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(18, 21, 26, 0.04),
+    0 16px 40px -20px rgba(18, 21, 26, 0.25);
+  overflow: hidden;
+}
+
+.mock-chip {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
