@@ -23,7 +23,7 @@ export default async function OnboardingPage() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.onboarded) redirect("/groups");
+  if (profile?.onboarded) redirect("/calendar");
 
   const suggestedName =
     profile?.display_name ||

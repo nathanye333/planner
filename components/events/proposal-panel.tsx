@@ -23,6 +23,7 @@ export function ProposalPanel({
   lockMode,
   thresholdCount,
   votingDeadline,
+  memberCount,
 }: {
   eventId: string;
   myVote: ProposalVote | null;
@@ -31,6 +32,7 @@ export function ProposalPanel({
   lockMode: "threshold" | "manual" | null;
   thresholdCount: number | null;
   votingDeadline: string | null;
+  memberCount: number;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -140,6 +142,13 @@ export function ProposalPanel({
             </p>
           )}
         </div>
+      )}
+
+      {memberCount > 0 && (
+        <p className="text-muted-foreground text-xs">
+          {voteCounts.yes} of {memberCount} members said yes (
+          {Math.round((voteCounts.yes / memberCount) * 100)}%)
+        </p>
       )}
 
       {isCreator && lockMode === "manual" && (

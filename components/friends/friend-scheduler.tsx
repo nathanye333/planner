@@ -18,6 +18,8 @@ import type { SlotAvailability } from "@/lib/scheduling/types";
 import type { MiniProfile } from "@/components/user-chip";
 import type { AvailabilityStatus } from "@/lib/constants";
 import { createGroup, addGroupMember } from "@/lib/actions/groups";
+import { useTimezone } from "@/components/timezone-provider";
+import { offsetDateInTimezone } from "@/lib/timezone";
 
 const SLOT_MINUTES = 30;
 const DAY_START_HOUR = 8;
@@ -82,6 +84,9 @@ export function FriendScheduleButton({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const supabase = createClient();
+  const timezone = useTimezone();
+  const dateStart = offsetDateInTimezone(0, timezone);
+  const dateEnd = offsetDateInTimezone(13, timezone);
 
   const members = [currentUser, friend];
   const memberIds = members.map((m) => m.id);
@@ -144,6 +149,12 @@ export function FriendScheduleButton({
                 participantCount={2}
                 profilesById={profilesById}
                 plannerTitle={`with ${friend.display_name}`}
+                slotMinutes={SLOT_MINUTES}
+                dayStartHour={DAY_START_HOUR}
+                dayEndHour={DAY_END_HOUR}
+                dateStart={dateStart}
+                dateEnd={dateEnd}
+                timezone={timezone}
               />
             )}
 

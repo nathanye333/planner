@@ -146,6 +146,7 @@ export default async function EventDetailPage({
               lockMode={(event.lock_mode as "threshold" | "manual" | null) ?? null}
               thresholdCount={event.threshold_count ?? null}
               votingDeadline={event.voting_deadline ?? null}
+              memberCount={(invites ?? []).length + 1}
             />
           ) : (
             <>

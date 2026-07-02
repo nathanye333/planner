@@ -50,5 +50,5 @@ export async function completeOnboarding(
 
   if (error) return { error: error.message };
 
-  redirect("/groups");
+  redirect("/calendar");
 }

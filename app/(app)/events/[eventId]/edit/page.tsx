@@ -40,8 +40,8 @@ export default async function EditEventPage({
     title: event.title,
     description: event.description ?? "",
     location: event.location ?? "",
-    start_at: toLocalInput(event.start_at),
-    end_at: toLocalInput(event.end_at),
+    start_at: isoToLocalInput(event.start_at, profile.timezone),
+    end_at: isoToLocalInput(event.end_at, profile.timezone),
     visibility: event.visibility as Visibility,
     group_id: event.group_id ?? "",
   };

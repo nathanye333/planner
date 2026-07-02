@@ -38,6 +38,7 @@ export function CalendarView({
   onEventClick,
   height = "auto",
   timeZone,
+  headerToolbarRight = "dayGridMonth,timeGridWeek,listWeek",
 }: {
   events: EventInput[];
   initialView?: "dayGridMonth" | "timeGridWeek" | "listWeek";
@@ -46,6 +47,7 @@ export function CalendarView({
   onEventClick?: (arg: EventClickArg) => void;
   height?: number | "auto";
   timeZone?: string;
+  headerToolbarRight?: string;
 }) {
   return (
     <FullCalendar
@@ -55,7 +57,7 @@ export function CalendarView({
       headerToolbar={{
         left: "prev,next today",
         center: "title",
-        right: "dayGridMonth,timeGridWeek,listWeek",
+        right: headerToolbarRight,
       }}
       buttonText={{
         today: "Today",

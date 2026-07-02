@@ -40,6 +40,9 @@ export function EventForm({
   mode,
   eventId,
   defaults,
+  defaultIsProposal = false,
+  onSuccess,
+  lockedGroup,
 }: {
   userId: string;
   friends: MiniProfile[];
@@ -47,14 +50,21 @@ export function EventForm({
   mode: "create" | "edit";
   eventId?: string;
   defaults: EventFormDefaults;
+  defaultIsProposal?: boolean;
+  /** When provided, called with the event id on success instead of navigating. */
+  onSuccess?: (eventId: string) => void;
+  /** When provided, visibility is fixed to this group and not editable. */
+  lockedGroup?: { id: string; name: string };
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const [visibility, setVisibility] = useState<Visibility>(defaults.visibility);
-  const [groupId, setGroupId] = useState(defaults.group_id);
+  const [visibility, setVisibility] = useState<Visibility>(
+    lockedGroup ? "group" : defaults.visibility,
+  );
+  const [groupId, setGroupId] = useState(lockedGroup ? lockedGroup.id : defaults.group_id);
   const [invitees, setInvitees] = useState<Set<string>>(new Set());
-  const [isProposal, setIsProposal] = useState(false);
+  const [isProposal, setIsProposal] = useState(defaultIsProposal);
   const [lockMode, setLockMode] = useState<"threshold" | "manual">("manual");
 
   function toggleInvitee(id: string) {
@@ -99,7 +109,11 @@ export function EventForm({
       }
       toast.success(mode === "create" ? "Event created" : "Event updated");
       if (mode === "create" && "data" in result && result.data) {
-        router.push(`/events/${result.data.id}`);
+        if (onSuccess) {
+          onSuccess(result.data.id);
+        } else {
+          router.push(`/events/${result.data.id}`);
+        }
       } else {
         router.push(`/events/${eventId}`);
         router.refresh();
@@ -163,46 +177,53 @@ export function EventForm({
         />
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      {lockedGroup ? (
         <div className="grid gap-2">
-          <Label>Visibility</Label>
-          <Select
-            value={visibility}
-            onValueChange={(v) => setVisibility(v as Visibility)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {VISIBILITIES.map((v) => (
-                <SelectItem key={v} value={v}>
-                  {VISIBILITY_META[v].label} — {VISIBILITY_META[v].description}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Group</Label>
+          <p className="text-sm">{lockedGroup.name}</p>
         </div>
-
-        {visibility === "group" && (
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
           <div className="grid gap-2">
-            <Label>Group</Label>
-            <Select value={groupId} onValueChange={setGroupId}>
+            <Label>Visibility</Label>
+            <Select
+              value={visibility}
+              onValueChange={(v) => setVisibility(v as Visibility)}
+            >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a group" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {groups.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.name}
+                {VISIBILITIES.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {VISIBILITY_META[v].label} — {VISIBILITY_META[v].description}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        )}
-      </div>
 
-      {mode === "create" && friends.length > 0 && (
+          {visibility === "group" && (
+            <div className="grid gap-2">
+              <Label>Group</Label>
+              <Select value={groupId} onValueChange={setGroupId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {groups.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === "create" && !lockedGroup && friends.length > 0 && (
         <div className="grid gap-2">
           <Label>Invite friends</Label>
           <ScrollArea className="max-h-48 rounded-lg border">

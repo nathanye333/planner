@@ -1,21 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarRange } from "lucide-react";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EventListItem } from "@/components/events/event-list-item";
-import { GroupCalendar } from "@/components/calendar/group-calendar";
-import {
-  GroupMembers,
-  type GroupMember,
-} from "@/components/groups/group-members";
-import { GroupScheduler } from "@/components/groups/group-scheduler";
-import { AvailabilityShareToggle } from "@/components/availability/availability-share-toggle";
-import { getShareStatus } from "@/lib/actions/availability";
+import { GroupDetailBody } from "@/components/groups/group-detail-body";
+import type { GroupMember } from "@/components/groups/group-members";
 import type { MiniProfile } from "@/components/user-chip";
+import type { EventFormDefaults } from "@/components/events/event-form";
+import { defaultEventInputs } from "@/lib/timezone";
 
 export default async function GroupDetailPage({
   params,
@@ -33,7 +23,7 @@ export default async function GroupDetailPage({
     .maybeSingle();
   if (!group) notFound();
 
-  const [{ data: membersRaw }, { data: friendsRaw }, { data: events }, isSharing] =
+  const [{ data: membersRaw }, { data: friendsRaw }, { data: events }] =
     await Promise.all([
       supabase
         .from("group_members")
@@ -52,7 +42,6 @@ export default async function GroupDetailPage({
         .select("*")
         .eq("group_id", groupId)
         .order("start_at", { ascending: true }),
-      getShareStatus("group", groupId),
     ]);
 
   const members = (membersRaw ?? []).map((m) => ({
@@ -69,76 +58,27 @@ export default async function GroupDetailPage({
     .map((f) => f.friend as unknown as MiniProfile)
     .filter((f) => f && !memberIds.has(f.id));
 
+  const fallback = defaultEventInputs(profile.timezone);
+  const eventDefaults: EventFormDefaults = {
+    title: "",
+    description: "",
+    location: "",
+    start_at: fallback.start,
+    end_at: fallback.end,
+    visibility: "group",
+    group_id: group.id,
+  };
+
   return (
-    <div>
-      <PageHeader
-        title={group.name}
-        description={group.description ?? undefined}
-        action={
-          <Button asChild>
-            <Link href={`/events/new?group=${group.id}`}>
-              <CalendarRange className="size-4" />
-              New group event
-            </Link>
-          </Button>
-        }
-      />
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between">
-              <CardTitle className="text-base">Shared calendar</CardTitle>
-              <AvailabilityShareToggle
-                recipientType="group"
-                recipientId={groupId}
-                isShared={isSharing}
-              />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <GroupCalendar groupId={group.id} userId={profile.id} />
-              <GroupScheduler
-                groupId={group.id}
-                members={members.map((m) => m.profile)}
-                groupName={group.name}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Group events</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {events && events.length > 0 ? (
-                events.map((e) => (
-                  <EventListItem
-                    key={e.id}
-                    event={e}
-                    timezone={profile.timezone}
-                  />
-                ))
-              ) : (
-                <p className="text-muted-foreground py-6 text-center text-sm">
-                  No events yet.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardContent>
-            <GroupMembers
-              groupId={group.id}
-              members={members}
-              candidates={candidates}
-              isAdmin={isAdmin}
-              currentUserId={profile.id}
-            />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <GroupDetailBody
+      group={{ id: group.id, name: group.name, description: group.description }}
+      profileId={profile.id}
+      timezone={profile.timezone}
+      members={members}
+      candidates={candidates}
+      isAdmin={isAdmin}
+      eventDefaults={eventDefaults}
+      events={events ?? []}
+    />
   );
 }

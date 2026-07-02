@@ -4,10 +4,8 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
-import { AvailabilityEditor } from "@/components/calendar/availability-editor";
-import type { GroupShare } from "@/components/calendar/availability-editor";
 
 type GroupRow = {
   role: string;
@@ -37,30 +35,13 @@ export default async function GroupsPage() {
 
   const groups = (data ?? []) as GroupRow[];
 
-  const groupList: GroupShare[] = groups
-    .filter((r) => r.group !== null)
-    .map(({ group }) => ({ id: group!.id, name: group!.name }));
-
   return (
     <div>
       <PageHeader
-        title="Home"
-        description="Your calendar and groups, all in one place."
+        title="Groups"
+        description="Create or join groups to plan together."
+        action={<CreateGroupDialog />}
       />
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">My Calendar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AvailabilityEditor userId={profile.id} groups={groupList} />
-        </CardContent>
-      </Card>
-
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-semibold">Groups</h2>
-        <CreateGroupDialog />
-      </div>
 
       {(pendingRequests ?? 0) > 0 && (
         <Link href="/friends">

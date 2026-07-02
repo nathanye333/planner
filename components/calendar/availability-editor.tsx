@@ -26,10 +26,11 @@ import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 import { utcIsoFromFullCalendar } from "@/lib/timezone";
 import { useTimezone } from "@/components/timezone-provider";
+import { getBlockShares, setBlockShares, type BlockShareTarget } from "@/lib/actions/availability";
 
 export type GroupShare = { id: string; name: string };
 
-const STATUSES: AvailabilityStatus[] = ["free", "tentative", "committed", "open"];
+const STATUSES: AvailabilityStatus[] = ["free", "tentative", "committed"];
 
 type Block = Tables<"availability_blocks">;
 
@@ -50,20 +51,91 @@ function toEvent(b: Block): EventInput {
   };
 }
 
+function shareKey(t: BlockShareTarget) {
+  return `${t.type}:${t.id}`;
+}
+
+function SharePicker({
+  groups,
+  friends,
+  selected,
+  onToggle,
+}: {
+  groups: GroupShare[];
+  friends: GroupShare[];
+  selected: Set<string>;
+  onToggle: (target: BlockShareTarget) => void;
+}) {
+  if (groups.length === 0 && friends.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        You&apos;re not in any groups or friends yet — this slot will be saved but not shared.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      {groups.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Share with groups:</p>
+          {groups.map((g) => {
+            const target: BlockShareTarget = { type: "group", id: g.id };
+            return (
+              <label
+                key={shareKey(target)}
+                className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 hover:bg-accent"
+              >
+                <Checkbox
+                  checked={selected.has(shareKey(target))}
+                  onCheckedChange={() => onToggle(target)}
+                />
+                <span className="text-sm">{g.name}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+      {friends.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Share with friends:</p>
+          {friends.map((f) => {
+            const target: BlockShareTarget = { type: "friend", id: f.id };
+            return (
+              <label
+                key={shareKey(target)}
+                className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 hover:bg-accent"
+              >
+                <Checkbox
+                  checked={selected.has(shareKey(target))}
+                  onCheckedChange={() => onToggle(target)}
+                />
+                <span className="text-sm">{f.name}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AvailabilityEditor({
   userId,
   groups = [],
+  friends = [],
 }: {
   userId: string;
   groups?: GroupShare[];
+  friends?: GroupShare[];
 }) {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const timezone = useTimezone();
   const [painter, setPainter] = useState<AvailabilityStatus>("free");
 
-  // Open slot creation state
+  // New block creation state
   const [pendingSlot, setPendingSlot] = useState<DateSelectArg | null>(null);
-  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+  const [pendingShares, setPendingShares] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
 
   // Edit existing block state
@@ -74,6 +146,8 @@ export function AvailabilityEditor({
     start: string;
     end: string;
   } | null>(null);
+  const [editShares, setEditShares] = useState<Set<string>>(new Set());
+  const [savingShares, setSavingShares] = useState(false);
 
   const { data: blocks = [] } = useQuery({
     queryKey: ["availability", userId],
@@ -86,22 +160,6 @@ export function AvailabilityEditor({
         .limit(500);
       return data ?? [];
     },
-  });
-
-  const createBlock = useMutation({
-    mutationFn: async (arg: DateSelectArg) => {
-      const { error } = await supabase.from("availability_blocks").insert({
-        user_id: userId,
-        start_at: utcIsoFromFullCalendar(arg.start, timezone),
-        end_at: utcIsoFromFullCalendar(arg.end, timezone),
-        status: painter,
-        source: "manual",
-      });
-      if (error) throw error;
-    },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["availability", userId] }),
-    onError: (e: Error) => toast.error(e.message),
   });
 
   const updateStatus = useMutation({
@@ -122,7 +180,6 @@ export function AvailabilityEditor({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["availability", userId] });
-      setSelected(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -143,17 +200,18 @@ export function AvailabilityEditor({
   });
 
   function handleSelect(arg: DateSelectArg) {
-    if (painter === "open") {
-      // Intercept: show dialog to pick which groups see this slot
-      setPendingSlot(arg);
-      setSelectedGroupIds(new Set());
-    } else {
-      createBlock.mutate(arg);
-      arg.view.calendar.unselect();
-    }
+    setPendingSlot(arg);
+    setPendingShares(new Set());
   }
 
-  async function confirmOpenSlot() {
+  function targetsFromKeys(keys: Set<string>): BlockShareTarget[] {
+    return [...keys].map((k) => {
+      const [type, id] = k.split(":");
+      return { type: type as "group" | "friend", id };
+    });
+  }
+
+  async function confirmNewSlot() {
     if (!pendingSlot) return;
     setCreating(true);
     try {
@@ -161,9 +219,9 @@ export function AvailabilityEditor({
         .from("availability_blocks")
         .insert({
           user_id: userId,
-          start_at: pendingSlot.start.toISOString(),
-          end_at: pendingSlot.end.toISOString(),
-          status: "open",
+          start_at: utcIsoFromFullCalendar(pendingSlot.start, timezone),
+          end_at: utcIsoFromFullCalendar(pendingSlot.end, timezone),
+          status: painter,
           source: "manual",
         })
         .select("id")
@@ -171,16 +229,9 @@ export function AvailabilityEditor({
 
       if (error || !block) throw error ?? new Error("Could not create block");
 
-      if (selectedGroupIds.size > 0) {
-        const { error: shareError } = await supabase
-          .from("availability_block_shares")
-          .insert(
-            [...selectedGroupIds].map((group_id) => ({
-              block_id: block.id,
-              group_id,
-            })),
-          );
-        if (shareError) throw shareError;
+      if (pendingShares.size > 0) {
+        const result = await setBlockShares(block.id, targetsFromKeys(pendingShares));
+        if (!result.ok) throw new Error(result.error);
       }
 
       queryClient.invalidateQueries({ queryKey: ["availability", userId] });
@@ -193,37 +244,58 @@ export function AvailabilityEditor({
     }
   }
 
-  function handleEventClick(arg: EventClickArg) {
+  async function handleEventClick(arg: EventClickArg) {
     const props = arg.event.extendedProps as {
       status: AvailabilityStatus;
       source: string;
     };
+    const id = arg.event.id;
     setSelected({
-      id: arg.event.id,
+      id,
       status: props.status,
       source: props.source,
       start: utcIsoFromFullCalendar(arg.event.start!, timezone),
       end: utcIsoFromFullCalendar(arg.event.end!, timezone),
     });
+    const shares = await getBlockShares(id);
+    setEditShares(new Set(shares.map(shareKey)));
   }
 
-  function toggleGroup(id: string) {
-    setSelectedGroupIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  function toggleTarget(setter: typeof setPendingShares) {
+    return (target: BlockShareTarget) => {
+      setter((prev) => {
+        const next = new Set(prev);
+        const key = shareKey(target);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    };
   }
 
-  // While the open-slot dialog is open, show a ghost event so the slot stays visible
+  async function saveEditShares() {
+    if (!selected) return;
+    setSavingShares(true);
+    try {
+      const result = await setBlockShares(selected.id, targetsFromKeys(editShares));
+      if (!result.ok) throw new Error(result.error);
+      toast.success("Sharing updated");
+      setSelected(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setSavingShares(false);
+    }
+  }
+
+  // While the new-slot dialog is open, show a ghost event so the slot stays visible
   const ghostEvent: EventInput | null = pendingSlot
     ? {
-        id: "__pending_open__",
+        id: "__pending__",
         start: pendingSlot.start.toISOString(),
         end: pendingSlot.end.toISOString(),
-        classNames: ["status-open", "opacity-60"],
-        title: "Open slot",
+        classNames: [`status-${painter}`, "opacity-60"],
+        title: AVAILABILITY_META[painter].label,
         editable: false,
       }
     : null;
@@ -244,16 +316,9 @@ export function AvailabilityEditor({
             )}
           >
             <span
-              className={cn(
-                "size-3 rounded-full",
-                AVAILABILITY_META[s].color,
-                s === "open" && "ring-2 ring-offset-1 ring-open",
-              )}
+              className={cn("size-3 rounded-full", AVAILABILITY_META[s].color)}
             />
             {AVAILABILITY_META[s].label}
-            {s === "open" && (
-              <span className="text-muted-foreground font-normal">· invite proposals</span>
-            )}
           </button>
         ))}
       </div>
@@ -266,7 +331,7 @@ export function AvailabilityEditor({
         timeZone={timezone}
       />
 
-      {/* Open slot creation dialog */}
+      {/* New block creation dialog */}
       <Dialog
         open={!!pendingSlot}
         onOpenChange={(open) => {
@@ -278,36 +343,21 @@ export function AvailabilityEditor({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Open slot</DialogTitle>
+            <DialogTitle>{AVAILABILITY_META[painter].label}</DialogTitle>
             {pendingSlot && (
               <DialogDescription>
-                {formatDateTime(pendingSlot.start.toISOString())} —{" "}
-                {formatDateTime(pendingSlot.end.toISOString())}
+                {formatDateTime(pendingSlot.start.toISOString(), timezone)} —{" "}
+                {formatDateTime(pendingSlot.end.toISOString(), timezone)}
               </DialogDescription>
             )}
           </DialogHeader>
 
-          {groups.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">Share with groups:</p>
-              {groups.map((g) => (
-                <label
-                  key={g.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 hover:bg-accent"
-                >
-                  <Checkbox
-                    checked={selectedGroupIds.has(g.id)}
-                    onCheckedChange={() => toggleGroup(g.id)}
-                  />
-                  <span className="text-sm">{g.name}</span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              You&apos;re not in any groups yet — this slot will be saved but not shared.
-            </p>
-          )}
+          <SharePicker
+            groups={groups}
+            friends={friends}
+            selected={pendingShares}
+            onToggle={toggleTarget(setPendingShares)}
+          />
 
           <DialogFooter>
             <Button
@@ -319,8 +369,8 @@ export function AvailabilityEditor({
             >
               Cancel
             </Button>
-            <Button onClick={confirmOpenSlot} disabled={creating}>
-              {creating ? "Saving…" : "Save open slot"}
+            <Button onClick={confirmNewSlot} disabled={creating}>
+              {creating ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -363,6 +413,13 @@ export function AvailabilityEditor({
             ))}
           </div>
 
+          <SharePicker
+            groups={groups}
+            friends={friends}
+            selected={editShares}
+            onToggle={toggleTarget(setEditShares)}
+          />
+
           <DialogFooter>
             {selected?.source === "manual" && (
               <Button
@@ -372,6 +429,9 @@ export function AvailabilityEditor({
                 Delete block
               </Button>
             )}
+            <Button onClick={saveEditShares} disabled={savingShares}>
+              {savingShares ? "Saving…" : "Save sharing"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

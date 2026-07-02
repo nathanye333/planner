@@ -110,14 +110,14 @@ export async function createEvent(
       title: v.title,
       description: v.description || null,
       location: v.location || null,
-      start_at: new Date(v.start_at).toISOString(),
-      end_at: new Date(v.end_at).toISOString(),
+      start_at: startAt,
+      end_at: endAt,
       visibility: v.visibility,
       group_id: v.visibility === "group" ? v.group_id || null : null,
       status: v.is_proposal ? "proposed" : "confirmed",
       lock_mode: v.is_proposal ? (v.lock_mode ?? null) : null,
       threshold_count: v.is_proposal && v.lock_mode === "threshold" ? (v.threshold_count ?? null) : null,
-      voting_deadline: v.is_proposal && v.voting_deadline ? new Date(v.voting_deadline).toISOString() : null,
+      voting_deadline: v.is_proposal && v.voting_deadline ? localInputToIso(v.voting_deadline, tz) : null,
     })
   if (error) return fail(error.message);
 
@@ -185,8 +185,8 @@ export async function updateEvent(
       title: v.title,
       description: v.description || null,
       location: v.location || null,
-      start_at: new Date(v.start_at).toISOString(),
-      end_at: new Date(v.end_at).toISOString(),
+      start_at: nextStartAt,
+      end_at: nextEndAt,
       visibility: v.visibility,
       group_id: v.visibility === "group" ? v.group_id || null : null,
     })
@@ -218,6 +218,16 @@ export async function updateEvent(
 export async function deleteEvent(eventId: string): Promise<ActionResult> {
   const { supabase, userId } = await authed();
   if (!userId) return fail("Not signed in");
+
+  // Verify ownership before any admin operations
+  const { data: ev, error: lookupErr } = await supabase
+    .from("events")
+    .select("creator_id")
+    .eq("id", eventId)
+    .maybeSingle();
+  if (lookupErr) return fail(lookupErr.message);
+  if (!ev || ev.creator_id !== userId) return fail("Not allowed");
+
   const admin = createAdminClient();
   const { error: cleanupError } = await admin
     .from("availability_blocks")
